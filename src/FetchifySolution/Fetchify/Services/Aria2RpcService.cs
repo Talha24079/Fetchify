@@ -18,7 +18,6 @@ namespace Fetchify.Services
         {
             _httpClient = new HttpClient();
         }
-
         public async Task<string> AddDownloadAsync(string url, string directory, string fileName)
         {
             // Validate input
@@ -71,8 +70,6 @@ namespace Fetchify.Services
                 return "Error: " + ex.Message;
             }
         }
-
-
         public async Task<List<ActiveDownload>> GetActiveDownloadsAsync()
         {
             var rpcRequest = new
@@ -128,5 +125,89 @@ namespace Fetchify.Services
                 return new List<ActiveDownload>();
             }
         }
+        public async Task<List<ActiveDownload>> GetAllDownloadsAsync()
+        {
+            var allDownloads = new List<ActiveDownload>();
+
+            allDownloads.AddRange(await GetDownloadsByMethod("aria2.tellActive"));
+            allDownloads.AddRange(await GetDownloadsByMethod("aria2.tellWaiting"));
+            allDownloads.AddRange(await GetDownloadsByMethod("aria2.tellStopped"));
+
+            return allDownloads;
+        }
+        private async Task<List<ActiveDownload>> GetDownloadsByMethod(string method)
+        {
+            var rpcRequest = new
+            {
+                jsonrpc = "2.0",
+                method = method,
+                id = Guid.NewGuid().ToString(),
+                @params = method switch
+                {
+                    "aria2.tellStopped" => new object[] { 0, 1000 },
+                    "aria2.tellWaiting" => new object[] { 0, 1000 },
+                    _ => new object[] { }
+                }
+
+        };
+
+            var content = new StringContent(JsonSerializer.Serialize(rpcRequest), Encoding.UTF8, "application/json");
+
+            try
+            {
+                var response = await _httpClient.PostAsync(_rpcUrl, content);
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                using var doc = JsonDocument.Parse(responseString);
+                if (!doc.RootElement.TryGetProperty("result", out var result)) return new List<ActiveDownload>();
+
+                var downloads = new List<ActiveDownload>();
+
+                foreach (var item in result.EnumerateArray())
+                {
+                    var fileName = item.GetProperty("files")[0].GetProperty("path").GetString();
+                    var status = item.GetProperty("status").GetString();
+                    var totalLength = long.Parse(item.GetProperty("totalLength").GetString());
+                    var completedLength = long.Parse(item.GetProperty("completedLength").GetString());
+                    var speed = long.Parse(item.GetProperty("downloadSpeed").GetString());
+                    var eta = (speed > 0 && totalLength > completedLength)
+                        ? $"{(totalLength - completedLength) / speed} sec"
+                        : "--";
+                    var progress = totalLength > 0 ? (int)((completedLength * 100) / totalLength) : 0;
+
+                    downloads.Add(new ActiveDownload
+                    {
+                        Gid = item.GetProperty("gid").GetString(),
+                        FileName = System.IO.Path.GetFileName(fileName),
+                        Status = status,
+                        Progress = progress,
+                        Speed = $"{speed / 1024} KB/s",
+                        EstimatedTimeRemaining = eta,
+                        TotalSize = $"{totalLength / 1024 / 1024.0:F2} MB"
+                    });
+                }
+                return downloads;
+            }
+            catch (Exception ex)
+            {
+                WPF.MessageBox.Show($"Error fetching downloads ({method}): {ex.Message}");
+                return new List<ActiveDownload>();
+            }
+        }
+        private async Task<bool> SendRpc(object requestObj)
+        {
+            try
+            {
+                var content = new StringContent(JsonSerializer.Serialize(requestObj), Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(_rpcUrl, content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
     }
 }

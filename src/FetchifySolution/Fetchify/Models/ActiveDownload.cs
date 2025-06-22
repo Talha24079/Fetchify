@@ -11,6 +11,27 @@ namespace Fetchify.Models
         private string speed;
         private string estimatedTimeRemaining;
         private string totalSize;
+        private string url;
+        private string directory;
+        private DateTime startedAt;
+        public string Url
+        {
+            get => url;
+            set { url = value; OnPropertyChanged(nameof(Url)); }
+        }
+
+        public string Directory
+        {
+            get => directory;
+            set { directory = value; OnPropertyChanged(nameof(Directory)); }
+        }
+
+        public DateTime StartedAt
+        {
+            get => startedAt;
+            set { startedAt = value; OnPropertyChanged(nameof(StartedAt)); }
+        }
+
         public string TotalSize
         {
             get => totalSize;
@@ -53,7 +74,7 @@ namespace Fetchify.Models
             set { estimatedTimeRemaining = value; OnPropertyChanged(nameof(EstimatedTimeRemaining)); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName)
         {

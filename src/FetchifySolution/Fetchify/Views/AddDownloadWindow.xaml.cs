@@ -1,9 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Windows;
-using Fetchify.Helpers;
+﻿using System.Windows;
 using Fetchify.Models;
-using Fetchify.Services;
 using WinForms = System.Windows.Forms;
 using WPF = System.Windows;
 
@@ -21,7 +17,7 @@ namespace Fetchify.Views
 
         private void StartDownload_Click(object sender, RoutedEventArgs e)
         {
-            string url = UrlTextBox.Text.Trim();         // Make sure this is not empty
+            string url = UrlTextBox.Text.Trim();         
             string directory = DirectoryTextBox.Text.Trim();
 
             if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(directory))
@@ -30,16 +26,14 @@ namespace Fetchify.Views
                 return;
             }
 
-            string fileName = System.IO.Path.GetFileName(new Uri(url).AbsolutePath);
+            string fileName = GetFileNameFromUrl(url);
             string outputArg = $"--out=\"{fileName}\"";
 
-            // This is only to call aria2c directly; not needed if using RPC
-            // Aria2Helper.StartDownload(url, directory, outputArg);
 
             var item = new DownloadItem
             {
-                Url = url,               // Make sure this exists in the model
-                Directory = directory,   // Make sure this exists in the model
+                Url = url,               
+                Directory = directory,   
                 FileName = fileName,
                 Status = "Starting",
                 Progress = 0,
@@ -47,14 +41,28 @@ namespace Fetchify.Views
                 EstimatedTimeRemaining = ""
             };
 
-            DownloadStarted?.Invoke(item);  // Must match delegate (object sender, DownloadItem item)
+            DownloadStarted?.Invoke(item); 
             Close();
         }
 
+        private string GetFileNameFromUrl(string url)
+        {
+            try
+            {
+                var uri = new Uri(url);
+                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                string filename = query["filename"];
 
+                if (!string.IsNullOrWhiteSpace(filename))
+                    return filename;
 
-
-
+                return System.IO.Path.GetFileName(uri.AbsolutePath);
+            }
+            catch
+            {
+                return "unknown.file";
+            }
+        }
 
         private void BrowseDirectory_Click(object sender, RoutedEventArgs e)
         {

@@ -54,7 +54,7 @@ namespace Fetchify.Models
             set { directory = value; OnPropertyChanged(nameof(Directory)); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName)
         {
