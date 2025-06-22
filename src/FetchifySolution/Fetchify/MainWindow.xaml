@@ -27,10 +27,16 @@
 
         </StackPanel>
 
-        <DataGrid Name="DownloadDataGrid" Margin="10,50,10,10" AutoGenerateColumns="False" 
-              ItemsSource="{Binding Downloads}" HeadersVisibility="Column"
-              GridLinesVisibility="All" IsReadOnly="True" 
-              AlternatingRowBackground="LightGray" RowHeaderWidth="0">
+        <DataGrid Name="DownloadDataGrid" 
+                  Margin="10,50,10,10" 
+                  AutoGenerateColumns="False" 
+                  ItemsSource="{Binding Downloads}" 
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="All" 
+                  IsReadOnly="True" 
+                  AlternatingRowBackground="LightGray" 
+                  RowHeaderWidth="0" 
+                  MouseDoubleClick="DownloadDataGrid_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" />
                 <DataGridTextColumn Header="Size" Binding="{Binding TotalSize}" Width="100" />

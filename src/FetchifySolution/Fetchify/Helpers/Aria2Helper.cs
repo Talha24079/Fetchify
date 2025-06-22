@@ -155,8 +155,5 @@ namespace Fetchify.Helpers
             return success;
         }
 
-
-
-
     }
 }

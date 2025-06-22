@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using WPF = System.Windows; 
 
@@ -17,6 +18,7 @@ namespace Fetchify
         public ObservableCollection<ActiveDownload> Downloads { get; set; } = new();
         private DispatcherTimer refreshTimer;
         private Aria2RpcService rpcService = new();
+        
 
         public MainWindow()
         {
@@ -58,20 +60,24 @@ namespace Fetchify
                     Progress = item.Progress,
                     Speed = item.Speed,
                     EstimatedTimeRemaining = item.EstimatedTimeRemaining,
-                    Url = item.Url,
-                    Directory = item.Directory,
-                    StartedAt = DateTime.Now
+                    TotalSize = "0 MB"  // This will be updated in the next refresh
                 };
 
                 Downloads.Add(activeDownload);
-                await DownloadHistoryManager.SaveDownloadsAsync(Downloads);
 
+                // 🔥 NEW: Open the status window for this download
+                var statusWindow = new DownloadStatusWindow(activeDownload)
+                {
+                    Owner = this
+                };
+                statusWindow.Show();
             }
             else
             {
                 WPF.MessageBox.Show("Failed to start download: " + gid);
             }
         }
+
 
         private async void RefreshTimer_Tick(object sender, EventArgs e)
         {
@@ -197,7 +203,6 @@ namespace Fetchify
             if (result != MessageBoxResult.Yes)
                 return;
 
-            // This now handles paused, active, and stopped tasks
             bool removed = await Aria2Helper.RemoveDownloadAsync(selected.Gid);
 
             if (removed)
@@ -212,6 +217,19 @@ namespace Fetchify
             }
         }
 
+        private void DownloadDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DownloadDataGrid.SelectedItem is not ActiveDownload selected)
+                return;
+
+            var statusWindow = new DownloadStatusWindow(selected);
+            statusWindow.OnDownloadRemoved = (removedDownload) =>
+            {
+                Downloads.Remove(removedDownload);
+                DownloadPersistenceHelper.SaveDownloadsToFile(Downloads.ToList());
+            };
+            statusWindow.Show();
+        }
 
 
 
