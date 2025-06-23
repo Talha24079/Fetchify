@@ -1,5 +1,9 @@
-﻿using System.Windows;
+﻿using Fetchify.Helpers;
 using Fetchify.Models;
+using System;
+using System.IO;
+using System.Net;
+using System.Windows;
 using WinForms = System.Windows.Forms;
 using WPF = System.Windows;
 
@@ -7,33 +11,51 @@ namespace Fetchify.Views
 {
     public partial class AddDownloadWindow : Window
     {
-        public string DownloadUrl { get; private set; }
+        public string? DownloadUrl { get; private set; }
         public delegate void DownloadStartedHandler(DownloadItem item);
-        public event DownloadStartedHandler DownloadStarted;
+        public event DownloadStartedHandler? DownloadStarted;
+
         public AddDownloadWindow()
         {
             InitializeComponent();
+            DirectoryTextBox.Text = SettingsManager.CurrentSettings.DefaultDownloadDirectory;
         }
 
         private void StartDownload_Click(object sender, RoutedEventArgs e)
         {
-            string url = UrlTextBox.Text.Trim();         
+            string url = UrlTextBox.Text.Trim();
             string directory = DirectoryTextBox.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(directory))
+            if (string.IsNullOrWhiteSpace(url))
             {
-                WPF.MessageBox.Show("URL and directory are required.");
+                WPF.MessageBox.Show("Download URL cannot be empty.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uriResult) ||
+                (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
+            {
+                WPF.MessageBox.Show("Invalid download URL format.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+            {
+                WPF.MessageBox.Show("Please select a valid target directory.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             string fileName = GetFileNameFromUrl(url);
-            string outputArg = $"--out=\"{fileName}\"";
 
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = $"file_{DateTime.Now.Ticks}.bin";
+            }
 
             var item = new DownloadItem
             {
-                Url = url,               
-                Directory = directory,   
+                Url = url,
+                Directory = directory,
                 FileName = fileName,
                 Status = "Starting",
                 Progress = 0,
@@ -41,7 +63,7 @@ namespace Fetchify.Views
                 EstimatedTimeRemaining = ""
             };
 
-            DownloadStarted?.Invoke(item); 
+            DownloadStarted?.Invoke(item);
             Close();
         }
 
@@ -51,16 +73,17 @@ namespace Fetchify.Views
             {
                 var uri = new Uri(url);
                 var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-                string filename = query["filename"];
+                string filename = query["filename"] ?? string.Empty;
 
                 if (!string.IsNullOrWhiteSpace(filename))
                     return filename;
 
-                return System.IO.Path.GetFileName(uri.AbsolutePath);
+                string extracted = Path.GetFileName(uri.LocalPath);
+                return string.IsNullOrWhiteSpace(extracted) ? "downloaded.file" : extracted;
             }
             catch
             {
-                return "unknown.file";
+                return "downloaded.file";
             }
         }
 
@@ -78,6 +101,7 @@ namespace Fetchify.Views
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
+            Close();
         }
     }
 }
