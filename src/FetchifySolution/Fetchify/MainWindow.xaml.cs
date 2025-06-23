@@ -15,18 +15,18 @@ namespace Fetchify
 {
     public partial class MainWindow : WPF.Window
     {
-        public ObservableCollection<ActiveDownload> Downloads { get; set; } = new();
         private DispatcherTimer refreshTimer;
         private Aria2RpcService rpcService = new();
-        
 
         public MainWindow()
         {
             Aria2ProcessManager.StartAria2WithRPC();
             InitializeComponent();
 
-            DownloadDataGrid.ItemsSource = Downloads;
+            // Bind the DataGrid to the global downloads list
+            DownloadDataGrid.ItemsSource = DownloadManager.Downloads;
 
+            // Setup periodic refresh timer
             refreshTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(2)
@@ -36,7 +36,6 @@ namespace Fetchify
 
             _ = LoadPreviousDownloadsAsync();
         }
-
 
         private void AddDownload_Click(object sender, WPF.RoutedEventArgs e)
         {
@@ -60,15 +59,24 @@ namespace Fetchify
                     Progress = item.Progress,
                     Speed = item.Speed,
                     EstimatedTimeRemaining = item.EstimatedTimeRemaining,
-                    TotalSize = "0 MB"  // This will be updated in the next refresh
+                    TotalSize = "0 MB",
+                    Url = item.Url,
+                    Directory = item.Directory
                 };
 
-                Downloads.Add(activeDownload);
+                DownloadManager.Downloads.Add(activeDownload);
 
-                // 🔥 NEW: Open the status window for this download
                 var statusWindow = new DownloadStatusWindow(activeDownload)
                 {
                     Owner = this
+                };
+                statusWindow.OnDownloadRemoved = async (removedDownload) =>
+                {
+                    if (removedDownload != null)
+                    {
+                        DownloadManager.Downloads.Remove(removedDownload);
+                        await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                    }
                 };
                 statusWindow.Show();
             }
@@ -78,8 +86,7 @@ namespace Fetchify
             }
         }
 
-
-        private async void RefreshTimer_Tick(object sender, EventArgs e)
+        private async void RefreshTimer_Tick(object? sender, EventArgs e)
         {
             try
             {
@@ -87,10 +94,9 @@ namespace Fetchify
 
                 foreach (var updatedItem in updatedList)
                 {
-                    var existing = Downloads.FirstOrDefault(d => d.Gid == updatedItem.Gid);
+                    var existing = DownloadManager.Downloads.FirstOrDefault(d => d.Gid == updatedItem.Gid);
                     if (existing != null)
                     {
-                        // Update properties
                         existing.Status = updatedItem.Status;
                         existing.Progress = updatedItem.Progress;
                         existing.Speed = updatedItem.Speed;
@@ -99,17 +105,17 @@ namespace Fetchify
                     }
                     else
                     {
-                        Downloads.Add(updatedItem);
+                        DownloadManager.Downloads.Add(updatedItem);
                     }
                 }
 
-                // Optional: remove items that no longer exist (only if desired)
+                // Optionally remove downloads no longer present
                 var gidsInUpdated = updatedList.Select(d => d.Gid).ToHashSet();
-                for (int i = Downloads.Count - 1; i >= 0; i--)
+                for (int i = DownloadManager.Downloads.Count - 1; i >= 0; i--)
                 {
-                    if (!gidsInUpdated.Contains(Downloads[i].Gid))
+                    if (!gidsInUpdated.Contains(DownloadManager.Downloads[i].Gid))
                     {
-                        Downloads.RemoveAt(i);
+                        DownloadManager.Downloads.RemoveAt(i);
                     }
                 }
             }
@@ -118,7 +124,6 @@ namespace Fetchify
                 System.Diagnostics.Debug.WriteLine("Refresh error: " + ex.Message);
             }
         }
-
 
         private async void PauseDownload_Click(object sender, RoutedEventArgs e)
         {
@@ -130,7 +135,7 @@ namespace Fetchify
 
             bool success = await Aria2Helper.PauseDownloadAsync(selected.Gid);
             WPF.MessageBox.Show(success ? "Paused successfully." : "Pause failed.");
-            await DownloadHistoryManager.SaveDownloadsAsync(Downloads);
+            await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
         }
 
         private async void ResumeDownload_Click(object sender, RoutedEventArgs e)
@@ -143,8 +148,7 @@ namespace Fetchify
 
             bool success = await Aria2Helper.ResumeDownloadAsync(selected.Gid);
             WPF.MessageBox.Show(success ? "Resumed successfully." : "Resume failed.");
-            await DownloadHistoryManager.SaveDownloadsAsync(Downloads);
-
+            await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
         }
 
         private async Task LoadPreviousDownloadsAsync()
@@ -152,18 +156,18 @@ namespace Fetchify
             try
             {
                 var savedDownloads = await DownloadHistoryManager.LoadDownloadsAsync();
-                Downloads.Clear();
+                DownloadManager.Downloads.Clear();
 
                 foreach (var download in savedDownloads)
                 {
-                    Downloads.Add(download);
+                    DownloadManager.Downloads.Add(download);
                 }
 
                 var liveDownloads = await rpcService.GetAllDownloadsAsync();
 
                 foreach (var item in liveDownloads)
                 {
-                    var existing = Downloads.FirstOrDefault(d => d.Gid == item.Gid);
+                    var existing = DownloadManager.Downloads.FirstOrDefault(d => d.Gid == item.Gid);
                     if (existing != null)
                     {
                         existing.Status = item.Status;
@@ -174,11 +178,11 @@ namespace Fetchify
                     }
                     else
                     {
-                        Downloads.Add(item);
+                        DownloadManager.Downloads.Add(item);
                     }
                 }
 
-                await DownloadHistoryManager.SaveDownloadsAsync(Downloads);
+                await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
             }
             catch (Exception ex)
             {
@@ -207,8 +211,8 @@ namespace Fetchify
 
             if (removed)
             {
-                Downloads.Remove(selected);
-                DownloadPersistenceHelper.SaveDownloadsToFile(Downloads.ToList());
+                DownloadManager.Downloads.Remove(selected);
+                await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
                 WPF.MessageBox.Show("Download removed successfully.");
             }
             else
@@ -223,15 +227,36 @@ namespace Fetchify
                 return;
 
             var statusWindow = new DownloadStatusWindow(selected);
-            statusWindow.OnDownloadRemoved = (removedDownload) =>
+            statusWindow.OnDownloadRemoved = async (removedDownload) =>
             {
-                Downloads.Remove(removedDownload);
-                DownloadPersistenceHelper.SaveDownloadsToFile(Downloads.ToList());
+                if (removedDownload != null)
+                {
+                    DownloadManager.Downloads.Remove(removedDownload);
+                    await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                }
             };
             statusWindow.Show();
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads).Wait();
+            base.OnClosed(e);
+        }
 
+        public void AddDownloadToList(ActiveDownload download)
+        {
+            DownloadManager.Downloads.Add(download);
+        }
+
+        public void OnDownloadRemovedHandler(ActiveDownload removedDownload)
+        {
+            if (removedDownload != null)
+            {
+                DownloadManager.Downloads.Remove(removedDownload);
+                _ = DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+            }
+        }
 
 
     }

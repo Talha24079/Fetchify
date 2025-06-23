@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.IO;
 
 namespace Fetchify.Models
 {
@@ -13,6 +14,9 @@ namespace Fetchify.Models
         private string totalSize;
         private string url;
         private string directory;
+        public string FullFilePath => Path.Combine(Directory, FileName);
+        public string Aria2TempFilePath => FullFilePath + ".aria2";
+
         private DateTime startedAt;
         public string Url
         {
