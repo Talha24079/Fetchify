@@ -20,22 +20,23 @@ namespace Fetchify
 
         public MainWindow()
         {
-            Aria2ProcessManager.StartAria2WithRPC();
-            InitializeComponent();
+            SettingsManager.Load(); 
 
-            // Bind the DataGrid to the global downloads list
+            if (SettingsManager.CurrentSettings.AutoStartAria2)
+            {
+                Aria2ProcessManager.StartAria2WithRPC();
+            }
+
+            InitializeComponent();
             DownloadDataGrid.ItemsSource = DownloadManager.Downloads;
 
-            // Setup periodic refresh timer
-            refreshTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(2)
-            };
+            refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             refreshTimer.Tick += RefreshTimer_Tick;
             refreshTimer.Start();
 
             _ = LoadPreviousDownloadsAsync();
         }
+
 
         private void AddDownload_Click(object sender, WPF.RoutedEventArgs e)
         {
@@ -238,12 +239,6 @@ namespace Fetchify
             statusWindow.Show();
         }
 
-        protected override void OnClosed(EventArgs e)
-        {
-            DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads).Wait();
-            base.OnClosed(e);
-        }
-
         public void AddDownloadToList(ActiveDownload download)
         {
             DownloadManager.Downloads.Add(download);
@@ -258,6 +253,20 @@ namespace Fetchify
             }
         }
 
+        private void OpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new SettingsWindow
+            {
+                Owner = this
+            };
+            window.ShowDialog();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            WPF.Application.Current.Shutdown(); 
+        }
 
     }
 }
