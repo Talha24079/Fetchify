@@ -25,6 +25,8 @@
             <TextBlock Text="Aria2 Secret Token (optional):" FontWeight="Bold" />
             <PasswordBox x:Name="TokenBox" Margin="0,5,0,5" />
 
+            <CheckBox x:Name="MinimizeTrayCheck" Content="Launch minimized to system tray" Margin="0,5,0,0" />
+
             <CheckBox x:Name="AutoStartCheck" Content="Auto Start Aria2 on Launch" Margin="0,10,0,0"/>
             <CheckBox x:Name="NotificationsCheck" Content="Enable Notifications" Margin="0,5,0,0"/>
 

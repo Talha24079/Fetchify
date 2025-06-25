@@ -14,7 +14,17 @@ namespace Fetchify.Models
         private string totalSize;
         private string url;
         private string directory;
-        public string FullFilePath => Path.Combine(Directory, FileName);
+        public string FullFilePath
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Directory) || string.IsNullOrWhiteSpace(FileName))
+                    return string.Empty;
+
+                return Path.Combine(Directory, FileName);
+            }
+        }
+
         public string Aria2TempFilePath => FullFilePath + ".aria2";
 
         private DateTime startedAt;

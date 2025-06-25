@@ -19,6 +19,9 @@ namespace Fetchify.Views
         private readonly string originalDirectory;
         private readonly string originalFileName;
 
+        private int stalledCounter = 0;
+        private int lastProgress = -1;
+
         private bool isResuming = false;
 
         public Action<ActiveDownload>? OnDownloadRemoved { get; set; }
@@ -52,6 +55,16 @@ namespace Fetchify.Views
         private void UpdateUI(object? sender, System.EventArgs e)
         {
             DownloadedSizeTextBlock.Text = $"{(download.Progress * ParseSizeInMB(download.TotalSize) / 100.0):F2} MB";
+            if (download.Progress == lastProgress)
+            {
+                stalledCounter++;
+            }
+            else
+            {
+                stalledCounter = 0;
+                lastProgress = download.Progress;
+            }
+
             ProgressBar.Value = download.Progress;
             ProgressText.Text = $"{download.Progress}%";
 
@@ -60,17 +73,21 @@ namespace Fetchify.Views
             EtaTextBlock.Text = download.EstimatedTimeRemaining;
 
             string filePath = Path.Combine(download.Directory, download.FileName);
-            string tempFilePath = filePath + ".aria2";
 
-            // ❗Fix: Only check file existence if download has actually started
-            if (download.Status == "active" && download.Progress > 0 &&
-                (!File.Exists(filePath) || !File.Exists(tempFilePath)))
+            if (download.Progress == 100 && File.Exists(filePath))
+            {
+                download.Status = "complete";
+                ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
+                updateTimer.Stop();
+            }
+            else if (download.Status == "active" && download.Progress > 0 && !File.Exists(filePath))
             {
                 download.Status = "error";
-                ErrorMessageTextBlock.Text = "Download interrupted. File or temp file missing.";
+                ErrorMessageTextBlock.Text = "Download interrupted. File missing.";
                 ErrorMessageTextBlock.Visibility = Visibility.Visible;
                 updateTimer.Stop();
             }
+
 
             if (download.Status == "error")
             {
@@ -101,6 +118,15 @@ namespace Fetchify.Views
 
             if (download.Status is "complete" or "error" or "removed")
                 updateTimer.Stop();
+
+            // If stuck for more than 30 seconds (30 ticks of 1 second each)
+            if (download.Status == "active" && stalledCounter >= 30)
+            {
+                download.Status = "error";
+                ErrorMessageTextBlock.Text = "Download appears to be stalled.";
+                ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                updateTimer.Stop();
+            }
         }
 
         private double ParseSizeInMB(string sizeText)
@@ -118,6 +144,7 @@ namespace Fetchify.Views
             if (result || download.Status == "paused")
             {
                 download.Status = "paused";
+                await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
             }
             else
             {
@@ -141,6 +168,7 @@ namespace Fetchify.Views
                 if (await Aria2Helper.ResumeDownloadAsync(download.Gid))
                 {
                     download.Status = "active";
+                    await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
                 }
                 else
                 {

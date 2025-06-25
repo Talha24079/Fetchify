@@ -15,14 +15,16 @@ namespace Fetchify.Services
         private readonly HttpClient _httpClient;
         private string RpcUrl => $"http://{SettingsManager.CurrentSettings.Aria2RpcHost}:{SettingsManager.CurrentSettings.Aria2RpcPort}/jsonrpc";
 
-        // Flags to prevent spamming MessageBox on repeated failures
         private static bool _activeErrorShown = false;
         private static bool _waitingErrorShown = false;
         private static bool _stoppedErrorShown = false;
 
         public Aria2RpcService()
         {
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(15) // Step 1: Limit timeout to prevent 100-second hangs
+            };
         }
 
         public async Task<string> AddDownloadAsync(string url, string directory, string fileName)
@@ -60,9 +62,13 @@ namespace Fetchify.Services
 
                 var jsonDoc = JsonDocument.Parse(responseBody);
                 if (jsonDoc.RootElement.TryGetProperty("result", out var resultProp))
-                    return resultProp.GetString(); // GID
+                    return resultProp.GetString();
 
                 return "Error: Unexpected response structure";
+            }
+            catch (TaskCanceledException ex)
+            {
+                return "Error: Request timed out. Check connection or aria2 status.";
             }
             catch (Exception ex)
             {
@@ -71,11 +77,7 @@ namespace Fetchify.Services
             }
         }
 
-        public async Task<List<ActiveDownload>> GetActiveDownloadsAsync()
-        {
-            return await GetDownloadsByMethod("aria2.tellActive");
-        }
-
+        public async Task<List<ActiveDownload>> GetActiveDownloadsAsync() => await GetDownloadsByMethod("aria2.tellActive");
         public async Task<List<ActiveDownload>> GetAllDownloadsAsync()
         {
             var allDownloads = new List<ActiveDownload>();
@@ -139,29 +141,38 @@ namespace Fetchify.Services
 
                 return downloads;
             }
+            catch (TaskCanceledException ex)
+            {
+                ShowOnce(method, $"Request timed out while calling {method}. Check your network or Aria2 server.");
+            }
             catch (Exception ex)
             {
-                if (method == "aria2.tellActive" && !_activeErrorShown)
-                {
-                    _activeErrorShown = true;
-                    WPF.MessageBox.Show($"Error fetching downloads ({method}): {ex.Message}");
-                }
-                else if (method == "aria2.tellWaiting" && !_waitingErrorShown)
-                {
-                    _waitingErrorShown = true;
-                    WPF.MessageBox.Show($"Error fetching downloads ({method}): {ex.Message}");
-                }
-                else if (method == "aria2.tellStopped" && !_stoppedErrorShown)
-                {
-                    _stoppedErrorShown = true;
-                    WPF.MessageBox.Show($"Error fetching downloads ({method}): {ex.Message}");
-                }
-                else
-                {
-                    Console.WriteLine($"Silent error ({method}): {ex.Message}");
-                }
+                ShowOnce(method, $"Error fetching downloads ({method}): {ex.Message}");
+            }
 
-                return new List<ActiveDownload>();
+            return new List<ActiveDownload>();
+        }
+
+        private void ShowOnce(string method, string message)
+        {
+            if (method == "aria2.tellActive" && !_activeErrorShown)
+            {
+                _activeErrorShown = true;
+                WPF.MessageBox.Show(message);
+            }
+            else if (method == "aria2.tellWaiting" && !_waitingErrorShown)
+            {
+                _waitingErrorShown = true;
+                WPF.MessageBox.Show(message);
+            }
+            else if (method == "aria2.tellStopped" && !_stoppedErrorShown)
+            {
+                _stoppedErrorShown = true;
+                WPF.MessageBox.Show(message);
+            }
+            else
+            {
+                Console.WriteLine($"Silent error ({method}): {message}");
             }
         }
 
@@ -179,5 +190,13 @@ namespace Fetchify.Services
                 return false;
             }
         }
+
+        // Inside Aria2RpcService.cs
+        public async Task<ActiveDownload?> GetDownloadStatusAsync(string gid)
+        {
+            var downloads = await GetAllDownloadsAsync();
+            return downloads.FirstOrDefault(d => d.Gid == gid);
+        }
+
     }
 }

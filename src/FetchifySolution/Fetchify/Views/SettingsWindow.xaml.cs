@@ -25,6 +25,7 @@ namespace Fetchify.Views
             TokenBox.Password = s.Aria2Token;
             AutoStartCheck.IsChecked = s.AutoStartAria2;
             NotificationsCheck.IsChecked = s.EnableNotifications;
+            MinimizeTrayCheck.IsChecked = s.LaunchMinimizedToTray;
         }
 
         private void Save_Click(object sender, WPF.RoutedEventArgs e)
@@ -79,6 +80,7 @@ namespace Fetchify.Views
             s.Aria2Token = token;
             s.AutoStartAria2 = AutoStartCheck.IsChecked == true;
             s.EnableNotifications = NotificationsCheck.IsChecked == true;
+            s.LaunchMinimizedToTray = MinimizeTrayCheck.IsChecked == true;
 
             SettingsManager.Save();
             this.DialogResult = true;

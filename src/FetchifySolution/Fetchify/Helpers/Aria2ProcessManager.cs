@@ -1,12 +1,16 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using WPF = System.Windows;
 
 namespace Fetchify.Helpers
 {
     internal static class Aria2ProcessManager
     {
         private static Process? aria2Process;
+        private static readonly string LogFile = "aria2.log";
 
         public static void StartAria2WithRPC()
         {
@@ -15,7 +19,8 @@ namespace Fetchify.Helpers
 
             if (!File.Exists(configPath))
             {
-                Console.WriteLine("Missing aria2.conf! Aria2 will not start.");
+                WPF.MessageBox.Show("Missing 'aria2.conf'. Aria2 cannot start.", "Startup Error",
+                    WPF.MessageBoxButton.OK, WPF.MessageBoxImage.Error);
                 return;
             }
 
@@ -31,11 +36,36 @@ namespace Fetchify.Helpers
 
             try
             {
-                aria2Process = Process.Start(startInfo);
+                aria2Process = new Process
+                {
+                    StartInfo = startInfo,
+                    EnableRaisingEvents = true
+                };
+
+                aria2Process.OutputDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                        Log("[Aria2 Output] " + e.Data);
+                };
+
+                aria2Process.ErrorDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                        Log("[Aria2 Error] " + e.Data);
+                };
+
+                aria2Process.Start();
+                aria2Process.BeginOutputReadLine();
+                aria2Process.BeginErrorReadLine();
+
+                Log("[Aria2] ✅ aria2c started successfully.");
+                Task.Delay(1000).Wait(); // Wait 1 second for RPC to bind
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error starting aria2c: " + ex.Message);
+                WPF.MessageBox.Show("Failed to start Aria2:\n\n" + ex.Message, "Aria2 Startup Error",
+                    WPF.MessageBoxButton.OK, WPF.MessageBoxImage.Error);
+                Log("[Aria2] ❌ Error starting aria2c: " + ex.Message);
             }
         }
 
@@ -43,14 +73,13 @@ namespace Fetchify.Helpers
         {
             try
             {
-                // Preferred: kill the instance we started
                 if (aria2Process != null && !aria2Process.HasExited)
                 {
                     aria2Process.Kill(true);
                     aria2Process.Dispose();
+                    Log("[Aria2] 🔴 aria2c process terminated.");
                 }
 
-                // Fallback: kill any remaining aria2c processes (safe only if you're not running other aria2c manually)
                 foreach (var proc in Process.GetProcessesByName("aria2c"))
                 {
                     try
@@ -63,9 +92,21 @@ namespace Fetchify.Helpers
 
                 aria2Process = null;
             }
+            catch (Exception ex)
+            {
+                Log("[Aria2] ⚠️ Error stopping aria2c: " + ex.Message);
+            }
+        }
+
+        private static void Log(string message)
+        {
+            try
+            {
+                File.AppendAllText(LogFile, $"[{DateTime.Now}] {message}\n");
+            }
             catch
             {
-                // Optional: log
+                // Silent fail if logging fails
             }
         }
     }

@@ -11,5 +11,6 @@ namespace Fetchify.Models
         public string Aria2Token { get; set; } = "";
         public bool AutoStartAria2 { get; set; } = true;
         public bool EnableNotifications { get; set; } = true;
+        public bool LaunchMinimizedToTray { get; set; } = false;
     }
 }

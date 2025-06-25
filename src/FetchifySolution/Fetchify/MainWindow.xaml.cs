@@ -2,21 +2,20 @@
 using Fetchify.Models;
 using Fetchify.Services;
 using Fetchify.Views;
-using System;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Text.Json;
-using System.Windows;
+using System.Drawing;
+using System.Windows.Controls;
+using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
-using WPF = System.Windows; 
-
+using WPF = System.Windows;
 namespace Fetchify
 {
     public partial class MainWindow : WPF.Window
     {
         private DispatcherTimer refreshTimer;
         private Aria2RpcService rpcService = new();
+        private System.Windows.Forms.NotifyIcon trayIcon;
+        private bool allowClose = false;
 
         public MainWindow()
         {
@@ -28,6 +27,14 @@ namespace Fetchify
             }
 
             InitializeComponent();
+            InitializeTrayIcon();
+            if (SettingsManager.CurrentSettings.LaunchMinimizedToTray)
+            {
+                this.WindowState = System.Windows.WindowState.Minimized;
+                this.ShowInTaskbar = false;
+                this.Hide();
+            }
+
             DownloadDataGrid.ItemsSource = DownloadManager.Downloads;
 
             refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -35,6 +42,45 @@ namespace Fetchify
             refreshTimer.Start();
 
             _ = LoadPreviousDownloadsAsync();
+        }
+
+        private void InitializeTrayIcon()
+        {
+            trayIcon = new System.Windows.Forms.NotifyIcon();
+            trayIcon.Icon = new System.Drawing.Icon("icon.ico"); 
+            trayIcon.Visible = true;
+            trayIcon.Text = "Fetchify - Download Manager";
+
+            // Context menu for tray
+            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
+            contextMenu.Items.Add("Show", null, (s, e) =>
+            {
+                this.Show();
+                this.WindowState = System.Windows.WindowState.Normal;
+                this.ShowInTaskbar = true;
+                this.Activate();
+            });
+
+            contextMenu.Items.Add("Exit", null, (s, e) =>
+            {
+                trayIcon.Visible = false;
+                WPF.Application.Current.Shutdown();
+            });
+
+            trayIcon.ContextMenuStrip = contextMenu;
+
+            trayIcon.DoubleClick += (s, e) =>
+            {
+                this.Show();
+                this.WindowState = System.Windows.WindowState.Normal;
+                this.ShowInTaskbar = true;
+                this.Activate();
+            };
+
+            // Start minimized to tray
+            this.WindowState = System.Windows.WindowState.Minimized;
+            this.ShowInTaskbar = false;
+            this.Hide();
         }
 
 
@@ -91,6 +137,9 @@ namespace Fetchify
         {
             try
             {
+                // Store currently selected GID
+                string? selectedGid = (DownloadDataGrid.SelectedItem as ActiveDownload)?.Gid;
+
                 var updatedList = await rpcService.GetAllDownloadsAsync();
 
                 foreach (var updatedItem in updatedList)
@@ -98,25 +147,56 @@ namespace Fetchify
                     var existing = DownloadManager.Downloads.FirstOrDefault(d => d.Gid == updatedItem.Gid);
                     if (existing != null)
                     {
-                        existing.Status = updatedItem.Status;
-                        existing.Progress = updatedItem.Progress;
-                        existing.Speed = updatedItem.Speed;
-                        existing.EstimatedTimeRemaining = updatedItem.EstimatedTimeRemaining;
-                        existing.TotalSize = updatedItem.TotalSize;
+                        if (existing.Status == "paused")
+                            continue;
+
+                        if (updatedItem.Progress > 0)
+                            existing.Progress = updatedItem.Progress;
+
+                        if (!string.IsNullOrWhiteSpace(updatedItem.TotalSize) && updatedItem.TotalSize != "0 MB")
+                            existing.TotalSize = updatedItem.TotalSize;
+
+                        // Optionally update speed and ETA only if the status is "active"
+                        if (updatedItem.Status == "active")
+                        {
+                            existing.Speed = updatedItem.Speed;
+                            existing.EstimatedTimeRemaining = updatedItem.EstimatedTimeRemaining;
+                        }
+
                     }
                     else
                     {
-                        DownloadManager.Downloads.Add(updatedItem);
+                        Dispatcher.Invoke(() =>
+                        {
+                            DownloadManager.Downloads.Add(updatedItem);
+                        });
                     }
                 }
 
-                // Optionally remove downloads no longer present
                 var gidsInUpdated = updatedList.Select(d => d.Gid).ToHashSet();
+
                 for (int i = DownloadManager.Downloads.Count - 1; i >= 0; i--)
                 {
-                    if (!gidsInUpdated.Contains(DownloadManager.Downloads[i].Gid))
+                    var item = DownloadManager.Downloads[i];
+                    if (!gidsInUpdated.Contains(item.Gid))
                     {
-                        DownloadManager.Downloads.RemoveAt(i);
+                        Dispatcher.Invoke(() =>
+                        {
+                            DownloadManager.Downloads.RemoveAt(i);
+                        });
+                    }
+                }
+
+                // Restore selection if still present
+                if (!string.IsNullOrEmpty(selectedGid))
+                {
+                    var matchingItem = DownloadManager.Downloads.FirstOrDefault(d => d.Gid == selectedGid);
+                    if (matchingItem != null)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            DownloadDataGrid.SelectedItem = matchingItem;
+                        });
                     }
                 }
             }
@@ -126,7 +206,7 @@ namespace Fetchify
             }
         }
 
-        private async void PauseDownload_Click(object sender, RoutedEventArgs e)
+        private async void PauseDownload_Click(object sender, WPF.RoutedEventArgs e)
         {
             if (DownloadDataGrid.SelectedItem is not ActiveDownload selected || string.IsNullOrWhiteSpace(selected.Gid))
             {
@@ -135,21 +215,38 @@ namespace Fetchify
             }
 
             bool success = await Aria2Helper.PauseDownloadAsync(selected.Gid);
-            WPF.MessageBox.Show(success ? "Paused successfully." : "Pause failed.");
+
+            // Wait briefly to let aria2 update its state
+            await Task.Delay(1000);
+
+            // Fetch latest status just to be sure
+            var refreshed = await rpcService.GetDownloadStatusAsync(selected.Gid);
+            if (refreshed != null)
+            {
+                selected.Status = refreshed.Status;
+                selected.Progress = refreshed.Progress;
+                selected.TotalSize = refreshed.TotalSize;
+                selected.Speed = refreshed.Speed;
+                selected.EstimatedTimeRemaining = refreshed.EstimatedTimeRemaining;
+            }
+
             await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+
+            WPF.MessageBox.Show(success ? "Paused successfully." : "Pause failed.");
         }
 
-        private async void ResumeDownload_Click(object sender, RoutedEventArgs e)
+
+        private async void ResumeDownload_Click(object sender, WPF.RoutedEventArgs e)
         {
             if (DownloadDataGrid.SelectedItem is not ActiveDownload selected || string.IsNullOrWhiteSpace(selected.Gid))
             {
                 WPF.MessageBox.Show("Please select a download to resume.");
                 return;
             }
-
+            selected.Status = "active"; 
+            await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
             bool success = await Aria2Helper.ResumeDownloadAsync(selected.Gid);
             WPF.MessageBox.Show(success ? "Resumed successfully." : "Resume failed.");
-            await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
         }
 
         private async Task LoadPreviousDownloadsAsync()
@@ -162,26 +259,45 @@ namespace Fetchify
                 foreach (var download in savedDownloads)
                 {
                     DownloadManager.Downloads.Add(download);
+
+                    // ⛔️ If saved state is "paused", force aria2 to pause it again
+                    if (download.Status == "paused")
+                    {
+                        await Aria2Helper.PauseDownloadAsync(download.Gid);
+                    }
                 }
 
                 var liveDownloads = await rpcService.GetAllDownloadsAsync();
-
+              
                 foreach (var item in liveDownloads)
                 {
                     var existing = DownloadManager.Downloads.FirstOrDefault(d => d.Gid == item.Gid);
                     if (existing != null)
                     {
-                        existing.Status = item.Status;
-                        existing.Progress = item.Progress;
-                        existing.Speed = item.Speed;
-                        existing.EstimatedTimeRemaining = item.EstimatedTimeRemaining;
-                        existing.TotalSize = item.TotalSize;
+                        // If paused, do NOT update it from aria2 (aria2 reports 0 for paused)
+                        if (existing.Status == "paused")
+                            continue;
+
+                        // If aria2 returns empty or zero progress, skip
+                        if (item.TotalSize == "0 MB" || item.Progress == 0)
+                            continue;
+                        if (!string.IsNullOrWhiteSpace(item.TotalSize) && item.TotalSize != "0 MB")
+                            existing.TotalSize = item.TotalSize;
+
+                        // Optional: if the saved status was "active", keep syncing speed and ETA
+                        if (existing.Status == "active")
+                        {
+                            existing.Speed = item.Speed;
+                            existing.EstimatedTimeRemaining = item.EstimatedTimeRemaining;
+                        }
                     }
+
                     else
                     {
                         DownloadManager.Downloads.Add(item);
                     }
                 }
+
 
                 await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
             }
@@ -191,7 +307,7 @@ namespace Fetchify
             }
         }
 
-        private async void RemoveDownload_Click(object sender, RoutedEventArgs e)
+        private async void RemoveDownload_Click(object sender, WPF.RoutedEventArgs e)
         {
             if (DownloadDataGrid.SelectedItem is not ActiveDownload selected || string.IsNullOrWhiteSpace(selected.Gid))
             {
@@ -202,10 +318,10 @@ namespace Fetchify
             var result = WPF.MessageBox.Show(
                 $"Are you sure you want to remove the download: {selected.FileName}?\nThis will permanently remove it from Fetchify and aria2.",
                 "Confirm Removal",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                WPF.MessageBoxButton.YesNo,
+                WPF.MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes)
+            if (result != WPF.MessageBoxResult.Yes)
                 return;
 
             bool removed = await Aria2Helper.RemoveDownloadAsync(selected.Gid);
@@ -244,16 +360,7 @@ namespace Fetchify
             DownloadManager.Downloads.Add(download);
         }
 
-        public void OnDownloadRemovedHandler(ActiveDownload removedDownload)
-        {
-            if (removedDownload != null)
-            {
-                DownloadManager.Downloads.Remove(removedDownload);
-                _ = DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
-            }
-        }
-
-        private void OpenSettings_Click(object sender, RoutedEventArgs e)
+        private void OpenSettings_Click(object sender, WPF.RoutedEventArgs e)
         {
             var window = new SettingsWindow
             {
@@ -262,10 +369,29 @@ namespace Fetchify
             window.ShowDialog();
         }
 
-        protected override void OnClosed(EventArgs e)
+        protected override async void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            WPF.Application.Current.Shutdown(); 
+            await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+            WPF.Application.Current.Shutdown();
+        }
+
+        protected override void OnStateChanged(EventArgs e)
+        {
+            base.OnStateChanged(e);
+            if (this.WindowState == System.Windows.WindowState.Minimized)
+            {
+                Hide();
+                trayIcon.Visible = true;
+            }
+        }
+
+        private void RestoreFromTray()
+        {
+            Show();
+            WindowState = System.Windows.WindowState.Normal;
+            Activate();
+            trayIcon.Visible = false;
         }
 
     }

@@ -16,12 +16,26 @@ namespace Fetchify.Helpers
             try
             {
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                string json = JsonSerializer.Serialize(downloads, options);
+                var safeDownloads = downloads.Select(d => new ActiveDownload
+                {
+                    Gid = d.Gid,
+                    FileName = d.FileName,
+                    Directory = d.Directory,
+                    Url = d.Url,
+                    Status = d.Status,
+                    Progress = d.Progress,
+                    EstimatedTimeRemaining = "--",
+                    Speed = "0",
+                    TotalSize = d.TotalSize
+                }).ToList();
+
+                string json = JsonSerializer.Serialize(safeDownloads, options);
+                System.Diagnostics.Debug.WriteLine($"Saving {downloads} downloads to {HistoryFilePath}");
                 await File.WriteAllTextAsync(HistoryFilePath, json);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error saving download history: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("Error saving download history: " + ex.Message);
             }
         }
 
@@ -38,7 +52,7 @@ namespace Fetchify.Helpers
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error loading download history: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("Error loading download history: " + ex.Message);
                 return new List<ActiveDownload>();
             }
         }
