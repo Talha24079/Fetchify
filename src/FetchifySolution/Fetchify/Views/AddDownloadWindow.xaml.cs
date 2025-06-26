@@ -45,7 +45,12 @@ namespace Fetchify.Views
                 return;
             }
 
-            string fileName = GetFileNameFromUrl(url);
+            string fileName = FileNameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = GetFileNameFromUrl(url);
+            }
+
 
             if (string.IsNullOrWhiteSpace(fileName))
             {
@@ -103,5 +108,27 @@ namespace Fetchify.Views
             DialogResult = false;
             Close();
         }
+
+        public void SetInitialDownload(DownloadItem item)
+        {
+            UrlTextBox.Text = item.Url;
+            FileNameBox.Text = item.FileName;
+            DirectoryTextBox.Text = item.Directory;
+        }
+
+        private void UrlTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(FileNameBox.Text))
+            {
+                string url = UrlTextBox.Text.Trim();
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    string fileName = GetFileNameFromUrl(url);
+                    if (!string.IsNullOrWhiteSpace(fileName))
+                        FileNameBox.Text = fileName;
+                }
+            }
+        }
+
     }
 }

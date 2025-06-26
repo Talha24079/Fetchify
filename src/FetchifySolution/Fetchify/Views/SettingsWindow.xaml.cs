@@ -120,5 +120,9 @@ namespace Fetchify.Views
             LoadSettings();
         }
 
+        private void MaxConcurrentBox_TextChanged(object sender, WPF.Controls.TextChangedEventArgs e)
+        {
+
+        }
     }
 }

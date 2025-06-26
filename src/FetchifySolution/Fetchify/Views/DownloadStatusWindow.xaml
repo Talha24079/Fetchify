@@ -5,10 +5,56 @@
         Height="300"
         Width="500"
         ResizeMode="NoResize"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="#F4F5F7"
+        FontFamily="Segoe UI">
 
-    <Grid Margin="10">
-        <StackPanel Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="10">
+    <Window.Resources>
+        <!-- Colors -->
+        <SolidColorBrush x:Key="AccentGreen" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="BodyText" Color="#3C3C3C"/>
+        <SolidColorBrush x:Key="SoftWhite" Color="#FFFFFF"/>
+
+        <!-- Button Styles -->
+        <Style x:Key="RoundedButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource BodyText}" />
+            <Setter Property="Background" Value="{StaticResource SoftWhite}" />
+            <Setter Property="BorderBrush" Value="#CCCCCC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Margin" Value="5,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Height" Value="35" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
+            <Setter Property="Background" Value="{StaticResource AccentGreen}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}" />
+        </Style>
+
+        <!-- TextBlock -->
+        <Style TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{StaticResource BodyText}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <StackPanel Orientation="Vertical" VerticalAlignment="Top" HorizontalAlignment="Stretch">
 
             <!-- File Name -->
             <TextBlock x:Name="FileNameTextBlock"
@@ -26,7 +72,7 @@
 
             <!-- Progress Bar -->
             <Grid Height="30" Margin="0,10,0,0">
-                <ProgressBar x:Name="ProgressBar" Height="30" Foreground="Green" />
+                <ProgressBar x:Name="ProgressBar" Height="30" Foreground="{StaticResource AccentGreen}" />
                 <TextBlock x:Name="ProgressText" 
                            HorizontalAlignment="Center" 
                            VerticalAlignment="Center"
@@ -63,19 +109,12 @@
                        Margin="0,10,0,0"/>
 
             <!-- Buttons -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-                <Button x:Name="PauseButton" Content="Pause" Width="120" Height="35" Margin="5" Click="PauseButton_Click"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                <Button x:Name="PauseButton" Content="Pause" Width="120" Style="{StaticResource RoundedButton}" Click="PauseButton_Click"/>
 
-                <!-- Resume/Retry in same space -->
-                <Grid Width="120" Height="35" Margin="5">
-                    <Button x:Name="ResumeButton"
-                            Content="Resume"
-                            Click="ResumeButton_Click"
-                            Visibility="Visible"/>
+                <Button x:Name="ResumeButton" Content="Resume" Width="120" Style="{StaticResource RoundedButton}" Margin="10,0" Click="ResumeButton_Click"/>
 
-                </Grid>
-
-                <Button x:Name="CancelButton" Content="Cancel" Width="120" Height="35" Margin="5" Click="CancelDownload_Click"/>
+                <Button x:Name="CancelButton" Content="Cancel" Width="120" Style="{StaticResource PrimaryButton}" Click="CancelDownload_Click"/>
             </StackPanel>
 
         </StackPanel>

@@ -19,7 +19,7 @@ namespace Fetchify
 
         public MainWindow()
         {
-            SettingsManager.Load(); 
+            SettingsManager.Load();
 
             if (SettingsManager.CurrentSettings.AutoStartAria2)
             {
@@ -28,6 +28,8 @@ namespace Fetchify
 
             InitializeComponent();
             InitializeTrayIcon();
+            HttpServer.Start();
+
             if (SettingsManager.CurrentSettings.LaunchMinimizedToTray)
             {
                 this.WindowState = System.Windows.WindowState.Minimized;
@@ -35,6 +37,7 @@ namespace Fetchify
                 this.Hide();
             }
 
+            this.DataContext = DownloadManager.Instance;
             DownloadDataGrid.ItemsSource = DownloadManager.Downloads;
 
             refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -47,7 +50,7 @@ namespace Fetchify
         private void InitializeTrayIcon()
         {
             trayIcon = new System.Windows.Forms.NotifyIcon();
-            trayIcon.Icon = new System.Drawing.Icon("icon.ico"); 
+            trayIcon.Icon = new System.Drawing.Icon("icon.ico");
             trayIcon.Visible = true;
             trayIcon.Text = "Fetchify - Download Manager";
 
@@ -76,11 +79,6 @@ namespace Fetchify
                 this.ShowInTaskbar = true;
                 this.Activate();
             };
-
-            // Start minimized to tray
-            this.WindowState = System.Windows.WindowState.Minimized;
-            this.ShowInTaskbar = false;
-            this.Hide();
         }
 
 
@@ -394,5 +392,9 @@ namespace Fetchify
             trayIcon.Visible = false;
         }
 
+        private void DownloadDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
     }
 }
