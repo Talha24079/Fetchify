@@ -122,10 +122,27 @@ namespace Fetchify.Services
                     var totalLength = long.Parse(item.GetProperty("totalLength").GetString());
                     var completedLength = long.Parse(item.GetProperty("completedLength").GetString());
                     var speed = long.Parse(item.GetProperty("downloadSpeed").GetString());
-                    var eta = (speed > 0 && totalLength > completedLength)
-                        ? $"{(totalLength - completedLength) / speed} sec"
-                        : "--";
                     var progress = totalLength > 0 ? (int)((completedLength * 100) / totalLength) : 0;
+
+                    string eta = "--";
+                    if (speed > 0 && totalLength > completedLength)
+                    {
+                        var etaSeconds = (totalLength - completedLength) / speed;
+                        eta = etaSeconds switch
+                        {
+                            >= 3600 => $"{etaSeconds / 3600}h {(etaSeconds % 3600) / 60}m",
+                            >= 60 => $"{etaSeconds / 60}m {etaSeconds % 60}s",
+                            > 0 => $"{etaSeconds}s",
+                            _ => "--"
+                        };
+                    }
+
+                    string formattedSpeed = speed switch
+                    {
+                        >= 1024 * 1024 => $"{speed / 1024 / 1024.0:F2} MB/s",
+                        >= 1024 => $"{speed / 1024.0:F2} KB/s",
+                        _ => $"{speed} B/s"
+                    };
 
                     downloads.Add(new ActiveDownload
                     {
@@ -133,10 +150,11 @@ namespace Fetchify.Services
                         FileName = System.IO.Path.GetFileName(fileName),
                         Status = status,
                         Progress = progress,
-                        Speed = $"{speed / 1024} KB/s",
+                        Speed = formattedSpeed,
                         EstimatedTimeRemaining = eta,
                         TotalSize = $"{totalLength / 1024 / 1024.0:F2} MB"
                     });
+
                 }
 
                 return downloads;
@@ -191,7 +209,6 @@ namespace Fetchify.Services
             }
         }
 
-        // Inside Aria2RpcService.cs
         public async Task<ActiveDownload?> GetDownloadStatusAsync(string gid)
         {
             var downloads = await GetAllDownloadsAsync();

@@ -29,15 +29,19 @@ namespace Fetchify.Views
         public DownloadStatusWindow(ActiveDownload activeDownload)
         {
             InitializeComponent();
-            download = activeDownload;
+
+            download = activeDownload ?? throw new ArgumentNullException(nameof(activeDownload));
             DataContext = download;
 
-            originalUrl = download.Url;
-            originalDirectory = download.Directory;
-            originalFileName = download.FileName;
+            originalUrl = download.Url ?? "";
+            originalDirectory = download.Directory ?? "";
+            originalFileName = download.FileName ?? "";
 
-            FileNameTextBlock.Text = download.FileName;
-            TotalSizeTextBlock.Text = download.TotalSize;
+            FileNameTextBlock.Text = originalFileName;
+            TotalSizeTextBlock.Text = download.TotalSize ?? "Unknown";
+
+            if (string.IsNullOrWhiteSpace(download.Directory))
+                download.Directory = originalDirectory;
 
             PauseButton.Click += PauseButton_Click;
             ResumeButton.Click += ResumeButton_Click;
@@ -52,85 +56,100 @@ namespace Fetchify.Views
             networkRetryTimer.Start();
         }
 
+
         private void UpdateUI(object? sender, System.EventArgs e)
         {
-            DownloadedSizeTextBlock.Text = $"{(download.Progress * ParseSizeInMB(download.TotalSize) / 100.0):F2} MB";
-            if (download.Progress == lastProgress)
+            try
             {
-                stalledCounter++;
+                DownloadedSizeTextBlock.Text = $"{(download.Progress * ParseSizeInMB(download.TotalSize) / 100.0):F2} MB";
+                if (download.Progress == lastProgress)
+                {
+                    stalledCounter++;
+                }
+                else
+                {
+                    stalledCounter = 0;
+                    lastProgress = download.Progress;
+                }
+
+                ProgressBar.Value = download.Progress;
+                ProgressText.Text = $"{download.Progress}%";
+
+                StatusTextBlock.Text = download.Status;
+                SpeedTextBlock.Text = download.Speed;
+                EtaTextBlock.Text = download.EstimatedTimeRemaining;
+
+                if (string.IsNullOrEmpty(download.Directory) || string.IsNullOrEmpty(download.FileName))
+                {
+                    WPF.MessageBox.Show("Download path or file name is missing.");
+                    return;
+                }
+
+                string filePath = Path.Combine(download.Directory, download.FileName);
+
+                if (download.Progress == 100 && File.Exists(filePath))
+                {
+                    download.Status = "complete";
+                    ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
+                    updateTimer.Stop();
+                }
+                else if (download.Status == "active" && download.Progress > 0 && !File.Exists(filePath))
+                {
+                    download.Status = "error";
+                    ErrorMessageTextBlock.Text = "Download interrupted. File missing.";
+                    ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                    updateTimer.Stop();
+                }
+
+
+                if (download.Status == "error")
+                {
+                    ErrorMessageTextBlock.Text = !NetworkHelper.IsInternetAvailable()
+                        ? "Download failed: Internet is disconnected."
+                        : "Download failed: Invalid link, file not found, or deleted during download.";
+                    ErrorMessageTextBlock.Visibility = Visibility.Visible;
+
+                    ResumeButton.Content = "Retry";
+                }
+                else
+                {
+                    ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
+                    ResumeButton.Content = "Resume";
+                }
+
+                StatusTextBlock.Foreground = download.Status switch
+                {
+                    "paused" => new SolidColorBrush(Colors.Orange),
+                    "active" => new SolidColorBrush(Colors.Green),
+                    "error" or "removed" => new SolidColorBrush(Colors.Red),
+                    _ => new SolidColorBrush(Colors.Black)
+                };
+
+                PauseButton.IsEnabled = download.Status == "active";
+                ResumeButton.IsEnabled = download.Status == "paused" || download.Status == "error";
+                CancelButton.IsEnabled = download.Status != "complete" && download.Status != "removed";
+
+                if (download.Status is "complete" or "error" or "removed")
+                    updateTimer.Stop();
+
+                if (download.Status == "active" && stalledCounter >= 30)
+                {
+                    download.Status = "error";
+                    ErrorMessageTextBlock.Text = "Download appears to be stalled.";
+                    ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                    updateTimer.Stop();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                stalledCounter = 0;
-                lastProgress = download.Progress;
-            }
-
-            ProgressBar.Value = download.Progress;
-            ProgressText.Text = $"{download.Progress}%";
-
-            StatusTextBlock.Text = download.Status;
-            SpeedTextBlock.Text = download.Speed;
-            EtaTextBlock.Text = download.EstimatedTimeRemaining;
-
-            string filePath = Path.Combine(download.Directory, download.FileName);
-
-            if (download.Progress == 100 && File.Exists(filePath))
-            {
-                download.Status = "complete";
-                ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
-                updateTimer.Stop();
-            }
-            else if (download.Status == "active" && download.Progress > 0 && !File.Exists(filePath))
-            {
-                download.Status = "error";
-                ErrorMessageTextBlock.Text = "Download interrupted. File missing.";
-                ErrorMessageTextBlock.Visibility = Visibility.Visible;
-                updateTimer.Stop();
-            }
-
-
-            if (download.Status == "error")
-            {
-                ErrorMessageTextBlock.Text = !NetworkHelper.IsInternetAvailable()
-                    ? "Download failed: Internet is disconnected."
-                    : "Download failed: Invalid link, file not found, or deleted during download.";
-                ErrorMessageTextBlock.Visibility = Visibility.Visible;
-
-                ResumeButton.Content = "Retry";
-            }
-            else
-            {
-                ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
-                ResumeButton.Content = "Resume";
-            }
-
-            StatusTextBlock.Foreground = download.Status switch
-            {
-                "paused" => new SolidColorBrush(Colors.Orange),
-                "active" => new SolidColorBrush(Colors.Green),
-                "error" or "removed" => new SolidColorBrush(Colors.Red),
-                _ => new SolidColorBrush(Colors.Black)
-            };
-
-            PauseButton.IsEnabled = download.Status == "active";
-            ResumeButton.IsEnabled = download.Status == "paused" || download.Status == "error";
-            CancelButton.IsEnabled = download.Status != "complete" && download.Status != "removed";
-
-            if (download.Status is "complete" or "error" or "removed")
-                updateTimer.Stop();
-
-            // If stuck for more than 30 seconds (30 ticks of 1 second each)
-            if (download.Status == "active" && stalledCounter >= 30)
-            {
-                download.Status = "error";
-                ErrorMessageTextBlock.Text = "Download appears to be stalled.";
-                ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                WPF.MessageBox.Show("Error in UpdateUI: " + ex.Message);
                 updateTimer.Stop();
             }
         }
 
         private double ParseSizeInMB(string sizeText)
         {
+            if (sizeText == "Unknown") return 0;
             if (sizeText.EndsWith("MB") && double.TryParse(sizeText.Replace("MB", "").Trim(), out double mb))
                 return mb;
             return 0;
@@ -199,6 +218,9 @@ namespace Fetchify.Views
 
             if (!string.IsNullOrWhiteSpace(newGid) && !newGid.StartsWith("Error"))
             {
+                download.Url = originalUrl;
+                download.Directory = originalDirectory;
+                download.FileName = originalFileName;
                 download.Gid = newGid;
                 download.Status = "Queued";
                 download.Progress = 0;
@@ -208,6 +230,7 @@ namespace Fetchify.Views
                 ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
                 updateTimer.Start();
             }
+
             else
             {
                 WPF.MessageBox.Show("Retry failed: " + newGid);

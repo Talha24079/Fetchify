@@ -5,6 +5,8 @@ namespace Fetchify.Models
 {
     public class ActiveDownload : INotifyPropertyChanged
     {
+
+
         private string gid;
         private string fileName;
         private string status;
@@ -14,6 +16,18 @@ namespace Fetchify.Models
         private string totalSize;
         private string url;
         private string directory;
+        public ActiveDownload()
+        {
+            Gid = "";
+            FileName = "";
+            Directory = "";
+            Url = "";
+            Status = "active";
+            Progress = 0;
+            Speed = "0";
+            EstimatedTimeRemaining = "--";
+            TotalSize = "0 MB";
+        }
         public string FullFilePath
         {
             get

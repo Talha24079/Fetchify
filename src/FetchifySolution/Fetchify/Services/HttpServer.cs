@@ -30,7 +30,7 @@ namespace Fetchify.Services
         }
 
         private static async void OnRequestReceived(IAsyncResult result)
-        { 
+        {
             if (listener == null || !listener.IsListening) return;
 
             HttpListenerContext context = listener.EndGetContext(result);
@@ -38,82 +38,155 @@ namespace Fetchify.Services
 
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
+            // ✅ Always add CORS headers for any request type
+            response.AddHeader("Access-Control-Allow-Origin", "*");
+            response.AddHeader("Access-Control-Allow-Headers", "*");
+            response.AddHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+
+            if (request.HttpMethod == "OPTIONS")
+            {
+                response.StatusCode = 200;
+                response.Close();
+                return;
+            }
+
 
             try
             {
                 using var reader = new StreamReader(request.InputStream);
                 string body = await reader.ReadToEndAsync();
 
+                // ✅ Handle Blob-based download
+                if (context.Request.Url.AbsolutePath == "/api/download/blob")
+                {
+                    var blobData = JsonSerializer.Deserialize<BlobDownloadRequest>(body, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (blobData != null && !string.IsNullOrWhiteSpace(blobData.Data))
+                    {
+                        byte[] bytes = Convert.FromBase64String(blobData.Data);
+                        string fileName = string.IsNullOrWhiteSpace(blobData.FileName)
+                            ? DetectExtensionAndGenerateFileName(bytes)
+                            : blobData.FileName;
+
+                        string downloadDir = SettingsManager.CurrentSettings.DefaultDownloadDirectory;
+                        string filePath = Path.Combine(downloadDir, fileName);
+
+                        await File.WriteAllBytesAsync(filePath, bytes);
+
+                        WPF.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            DownloadManager.Downloads.Add(new ActiveDownload
+                            {
+                                FileName = fileName,
+                                Directory = downloadDir,
+                                Progress = 100,
+                                Status = "complete",
+                                TotalSize = $"{bytes.Length / 1024f / 1024f:F2} MB",
+                                Speed = "0 KB/s",
+                                EstimatedTimeRemaining = "--"
+                            });
+                        });
+
+                        response.StatusCode = 200;
+                        await using var writer = new StreamWriter(response.OutputStream);
+                        await writer.WriteAsync("Blob received");
+                        response.Close();
+                        return;
+                    }
+
+                    response.StatusCode = 400;
+                    await using (var writer = new StreamWriter(response.OutputStream))
+                    {
+                        await writer.WriteAsync("Invalid blob payload");
+                    }
+                    response.Close();
+                    return;
+                }
+
+                // ✅ Handle Normal URL-based downloads
                 var data = JsonSerializer.Deserialize<DownloadRequest>(body, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
-                if (data == null)
-                {
-                    WPF.MessageBox.Show("Data is null");
-                }
-                else if (string.IsNullOrWhiteSpace(data.Url))
-                {
-                    WPF.MessageBox.Show("URL is missing in request");
-                }
 
-
-                if (data != null && !string.IsNullOrWhiteSpace(data.Url))
-                {
-                    WPF.Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        
-
-                        var item = new DownloadItem
-                        {
-                            Url = data.Url,
-                            FileName = Path.GetFileName(new Uri(data.Url).LocalPath),
-                            Directory = SettingsManager.CurrentSettings.DefaultDownloadDirectory
-                        };
-
-
-                        var addWindow = new AddDownloadWindow();
-                        addWindow.SetInitialDownload(item);
-                        addWindow.Owner = WPF.Application.Current.MainWindow;
-                        addWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-
-                        // 👇 These two lines make sure it stays on top
-                        addWindow.Topmost = true;
-                        addWindow.Activate();  // Ensures it grabs focus
-
-                        // Subscribe to event
-                        addWindow.DownloadStarted += async download =>
-                        {
-                            var rpc = new Aria2RpcService();
-                            string result = await rpc.AddDownloadAsync(download.Url, download.Directory, download.FileName);
-
-                            if (result.StartsWith("Error"))
-                                WPF.MessageBox.Show("Download failed: " + result);
-                            else
-                                WPF.MessageBox.Show("✅ Download added successfully!");
-                        };
-
-                        addWindow.ShowDialog();
-
-                    });
-
-
-
-                    response.StatusCode = 200;
-                    await using var writer = new StreamWriter(response.OutputStream);
-                    await writer.WriteAsync("Received");
-                }
-                else
+                if (data == null || string.IsNullOrWhiteSpace(data.Url))
                 {
                     response.StatusCode = 400;
+                    await using var invalidWriter = new StreamWriter(response.OutputStream);
+                    await invalidWriter.WriteAsync("Invalid URL payload");
+                    response.Close();
+                    return;
                 }
+
+                WPF.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var item = new DownloadItem
+                    {
+                        Url = data.Url,
+                        FileName = Path.GetFileName(new Uri(data.Url).LocalPath),
+                        Directory = SettingsManager.CurrentSettings.DefaultDownloadDirectory
+                    };
+
+                    var addWindow = new AddDownloadWindow();
+                    addWindow.SetInitialDownload(item);
+                    addWindow.Owner = WPF.Application.Current.MainWindow;
+                    addWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                    addWindow.Topmost = true;
+                    addWindow.Activate();
+
+                    if (WPF.Application.Current.MainWindow is MainWindow mainWin)
+                    {
+                        addWindow.DownloadStarted += mainWin.StartDownload;
+                    }
+                    else
+                    {
+                        WPF.MessageBox.Show("Main window not found. Cannot start download.");
+                    }
+
+                    addWindow.ShowDialog();
+                });
+
+                response.StatusCode = 200;
+                await using var okWriter = new StreamWriter(response.OutputStream);
+                await okWriter.WriteAsync("Download received");
+                response.Close();
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine("HttpServer error: " + ex.Message);
                 response.StatusCode = 500;
+                await using var errorWriter = new StreamWriter(response.OutputStream);
+                await errorWriter.WriteAsync("Internal Server Error");
+                response.Close();
+            }
+        }
+
+        private static string DetectExtensionAndGenerateFileName(byte[] bytes)
+        {
+            string extension = ".bin";
+
+            if (bytes.Length >= 4)
+            {
+                if (bytes[0] == 0x25 && bytes[1] == 0x50) extension = ".pdf";         // %PDF
+                else if (bytes[0] == 0x89 && bytes[1] == 0x50) extension = ".png";     // PNG
+                else if (bytes[0] == 0xFF && bytes[1] == 0xD8) extension = ".jpg";     // JPG/JPEG
+                else if (bytes[0] == 0x47 && bytes[1] == 0x49) extension = ".gif";     // GIF
+                else if (bytes[0] == 0x42 && bytes[1] == 0x4D) extension = ".bmp";     // BMP
+                else if (bytes[0] == 0x50 && bytes[1] == 0x4B) extension = ".zip";     // ZIP, DOCX, etc.
+                else if (bytes[0] == 0x1F && bytes[1] == 0x8B) extension = ".gz";      // GZIP
+                else if (bytes[0] == 0x4D && bytes[1] == 0x5A) extension = ".exe";     // EXE
             }
 
-            response.Close();
+            return $"download_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+        }
+
+        private class BlobDownloadRequest
+        {
+            public string FileName { get; set; } = "unknown_file";
+            public string Data { get; set; } = "";
         }
 
         private class DownloadRequest

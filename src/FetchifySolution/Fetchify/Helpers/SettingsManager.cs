@@ -18,6 +18,10 @@ namespace Fetchify.Helpers
                 {
                     string json = File.ReadAllText(SettingsFilePath);
                     CurrentSettings = JsonSerializer.Deserialize<SettingsModel>(json) ?? new SettingsModel();
+                    if (string.IsNullOrWhiteSpace(CurrentSettings.DefaultDownloadDirectory))
+                    {
+                        CurrentSettings.DefaultDownloadDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    }
                 }
                 catch
                 {
