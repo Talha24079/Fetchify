@@ -38,7 +38,7 @@ namespace Fetchify.Services
 
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
-            // ✅ Always add CORS headers for any request type
+            // ✅ Always add CORS headers for any request type 
             response.AddHeader("Access-Control-Allow-Origin", "*");
             response.AddHeader("Access-Control-Allow-Headers", "*");
             response.AddHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");

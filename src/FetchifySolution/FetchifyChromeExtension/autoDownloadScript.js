@@ -1,9 +1,8 @@
 (function () {
-  const downloadExtensions = /\.(zip|exe|mp4|mp3|pdf|iso|rar|7z|msi|deb|apk|tar\.gz|docx?|xlsx?|pptx?)$/i;
+  const downloadExtensions = /\.(zip|exe|mp4|mp3|pdf|iso|rar|7z|msi|deb|apk|tar\.gz|docx?|xlsx?|pptx?|csv)$/i;
 
   function sendToFetchify(url) {
     console.log("[Fetchify] Auto-detected download:", url);
-
     fetch("http://localhost:12345/api/download", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -20,10 +19,12 @@
     const anchor = e.target.closest("a");
     if (!anchor || !anchor.href) return;
 
+    if (e.button !== 0 || e.ctrlKey || e.metaKey) return; // left click only, no ctrl/meta
+
     const url = anchor.href;
 
     if (downloadExtensions.test(url)) {
-      e.preventDefault(); // Stop Chrome default download
+      e.preventDefault();
       e.stopPropagation();
 
       console.log("[Fetchify] Intercepted link click:", url);
@@ -45,27 +46,24 @@
   }
 
   function tryAutoDetectDownloadLinks() {
+    const url = window.location.href.toLowerCase();
+    if (!url.includes("thank-you") && !url.includes("success")) return;
+
     const links = Array.from(document.querySelectorAll("a[href]"));
     for (const a of links) {
       if (downloadExtensions.test(a.href)) {
         console.log("[Fetchify] Auto-detected static link:", a.href);
         sendToFetchify(a.href);
-        break; // Only handle one
+        break; // handle only one
       }
     }
   }
 
-  // Intercept user clicks early (for dynamic DOM)
-  document.addEventListener("click", interceptLinkClick, true);
+  document.addEventListener("click", interceptLinkClick, true); // capture phase
 
-  // Prevent static links from triggering download
   window.addEventListener("DOMContentLoaded", preventDefaultOnMatchingLinks);
 
-  // Auto-detect on thank-you/success pages
   window.addEventListener("load", () => {
-    const url = window.location.href.toLowerCase();
-    if (url.includes("thank-you") || url.includes("success")) {
-      setTimeout(tryAutoDetectDownloadLinks, 1500);
-    }
+    tryAutoDetectDownloadLinks();
   });
 })();
