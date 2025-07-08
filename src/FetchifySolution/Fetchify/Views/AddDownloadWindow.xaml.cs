@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Windows;
+using System.Windows.Controls;
 using WinForms = System.Windows.Forms;
 using WPF = System.Windows;
 
@@ -109,26 +110,15 @@ namespace Fetchify.Views
             Close();
         }
 
-        public void SetInitialDownload(DownloadItem item)
+        public async Task SetInitialDownload(DownloadItem item)
         {
-            UrlTextBox.Text = item.Url;
+            item.FileName = await LinkNameHelper.GenerateFileNameAsync(item.Url);
             FileNameBox.Text = item.FileName;
+            UrlTextBox.Text = item.Url;
             DirectoryTextBox.Text = item.Directory;
         }
 
-        private void UrlTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(FileNameBox.Text))
-            {
-                string url = UrlTextBox.Text.Trim();
-                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-                {
-                    string fileName = GetFileNameFromUrl(url);
-                    if (!string.IsNullOrWhiteSpace(fileName))
-                        FileNameBox.Text = fileName;
-                }
-            }
-        }
+
 
     }
 }

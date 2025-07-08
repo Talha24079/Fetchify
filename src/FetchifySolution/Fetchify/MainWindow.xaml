@@ -4,137 +4,304 @@
         Title="Fetchify" Height="500" Width="860"
         MinWidth="700" MinHeight="450"
         WindowStartupLocation="CenterScreen"
-        Background="#F4F5F7"
+        Background="#F8FAFC"
         FontFamily="Segoe UI">
 
     <Window.Resources>
-        <!-- Colors -->
-        <SolidColorBrush x:Key="AccentGreen" Color="#4CAF50" />
+        <!-- Enhanced Color Palette -->
+        <SolidColorBrush x:Key="AccentGreen" Color="#10B981" />
+        <SolidColorBrush x:Key="AccentGreenHover" Color="#059669" />
+        <SolidColorBrush x:Key="AccentGreenPressed" Color="#047857" />
         <SolidColorBrush x:Key="SoftWhite" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="LightGray" Color="#E0E0E0" />
-        <SolidColorBrush x:Key="HeaderText" Color="#1E1E1E" />
-        <SolidColorBrush x:Key="BodyText" Color="#3C3C3C" />
+        <SolidColorBrush x:Key="LightGray" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="HeaderText" Color="#111827" />
+        <SolidColorBrush x:Key="BodyText" Color="#374151" />
+        <SolidColorBrush x:Key="SecondaryText" Color="#6B7280" />
+        <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="BorderColor" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="HoverBackground" Color="#F3F4F6" />
+        <SolidColorBrush x:Key="AlternatingRowBackground" Color="#FAFBFC" />
 
-        <!-- Drop Shadow Effect -->
-        <DropShadowEffect x:Key="DropShadow" BlurRadius="4" ShadowDepth="1" Opacity="0.2" />
+        <!-- Enhanced Drop Shadow Effects -->
+        <DropShadowEffect x:Key="CardShadow" BlurRadius="10" ShadowDepth="2" Opacity="0.1" Color="#000000" />
+        <DropShadowEffect x:Key="ButtonShadow" BlurRadius="6" ShadowDepth="2" Opacity="0.1" Color="#000000" />
+        <DropShadowEffect x:Key="LogoShadow" BlurRadius="8" ShadowDepth="3" Opacity="0.08" Color="#000000" />
 
-        <!-- Base Rounded Button -->
-        <Style x:Key="RoundedButton" TargetType="Button">
+        <!-- Enhanced Rounded Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
             <Setter Property="Foreground" Value="{StaticResource BodyText}" />
             <Setter Property="Background" Value="{StaticResource SoftWhite}" />
-            <Setter Property="BorderBrush" Value="#CCCCCC" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Padding" Value="16,8" />
-            <Setter Property="Margin" Value="5,0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Padding" Value="18,10" />
+            <Setter Property="Margin" Value="6,0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Height" Value="40" />
-            <Setter Property="Width" Value="120" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="MinWidth" Value="45" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="8"
                                 SnapsToDevicePixels="True"
-                                Effect="{StaticResource DropShadow}">
+                                Effect="{StaticResource ButtonShadow}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource HoverBackground}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource LightGray}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Enhanced Primary Button -->
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
+            <Setter Property="Background" Value="{StaticResource AccentGreen}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True"
+                                Effect="{StaticResource ButtonShadow}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentGreenHover}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreenHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentGreenPressed}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreenPressed}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Enhanced DataGrid Styling -->
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{StaticResource CardBackground}" />
+            <Setter Property="AlternatingRowBackground" Value="{StaticResource AlternatingRowBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="RowHeaderWidth" Value="0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource BodyText}" />
+            <Setter Property="RowHeight" Value="38"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource LightGray}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="SelectionUnit" Value="FullRow"/>
+            <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGrid">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                SnapsToDevicePixels="True"
+                                Effect="{StaticResource CardShadow}">
+                            <ScrollViewer x:Name="DG_ScrollViewer" Focusable="false">
+                                <ScrollViewer.Template>
+                                    <ControlTemplate TargetType="ScrollViewer">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <DataGridColumnHeadersPresenter x:Name="PART_ColumnHeadersPresenter" Grid.Column="1"/>
+                                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="1" Grid.Row="1"/>
+                                            <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="2" Grid.Row="1" 
+                                                     Orientation="Vertical" 
+                                                     Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                                            <Grid Grid.Column="1" Grid.Row="2">
+                                                <ScrollBar x:Name="PART_HorizontalScrollBar" 
+                                                         Orientation="Horizontal" 
+                                                         Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"/>
+                                            </Grid>
+                                        </Grid>
+                                    </ControlTemplate>
+                                </ScrollViewer.Template>
+                                <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Enhanced DataGrid Column Header -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Background" Value="{StaticResource HoverBackground}"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Height" Value="44"/>
+        </Style>
+
+        <!-- Enhanced DataGrid Cell -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#F0F0F0"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#D0D0D0"/>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E8F5E8"/>
+                    <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <!-- Primary Button (Green) -->
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
-            <Setter Property="Background" Value="{StaticResource AccentGreen}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}" />
+        <!-- Enhanced DataGrid Row -->
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#45A049"/>
+                    <Setter Property="Background" Value="{StaticResource HoverBackground}"/>
                 </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#388E3C"/>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E8F5E8"/>
                 </Trigger>
             </Style.Triggers>
-        </Style>
-
-        <!-- DataGrid Styling -->
-        <Style TargetType="DataGrid">
-            <Setter Property="Background" Value="{StaticResource SoftWhite}" />
-            <Setter Property="AlternatingRowBackground" Value="#F9FAFB" />
-            <Setter Property="BorderBrush" Value="#CCCCCC" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="RowHeaderWidth" Value="0" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Foreground" Value="{StaticResource BodyText}" />
-            <Setter Property="RowHeight" Value="34"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-        </Style>
-
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="Background" Value="#E5E5E5"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        </Style>
-
-        <Style TargetType="DataGridCell">
-            <Setter Property="Padding" Value="6,3"/>
-            <Setter Property="BorderThickness" Value="0"/>
         </Style>
     </Window.Resources>
 
-    <DockPanel LastChildFill="True" Margin="10">
-        <!-- Top Logo and Buttons -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="0,0,0,10">
-            <!-- Logo Placeholder -->
-            <Border Width="60" Height="60" CornerRadius="20" Background="{StaticResource SoftWhite}" Margin="0,0,15,0" VerticalAlignment="Center">
-                <Image Source="fetchify_logo.png" Stretch="Uniform" />
-            </Border>
+    <!-- Main Container with Enhanced Padding -->
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <!-- Buttons -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Add Download" Style="{StaticResource PrimaryButton}" Click="AddDownload_Click"/>
-                <Button Content="Pause" Style="{StaticResource RoundedButton}" Click="PauseDownload_Click"/>
-                <Button Content="Resume" Style="{StaticResource RoundedButton}" Click="ResumeDownload_Click"/>
-                <Button Content="Remove" Style="{StaticResource RoundedButton}" Click="RemoveDownload_Click"/>
-                <Button Content="Settings" Style="{StaticResource RoundedButton}" Click="OpenSettings_Click"/>
-            </StackPanel>
-        </StackPanel>
+        <!-- Enhanced Header Section -->
+        <Border Grid.Row="0" 
+                Background="{StaticResource CardBackground}" 
+                CornerRadius="16" 
+                Padding="24,20" 
+                Margin="0,0,0,20"
+                Effect="{StaticResource CardShadow}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- DataGrid -->
-        <DataGrid Name="DownloadDataGrid" 
-                  AutoGenerateColumns="False" 
-                  ItemsSource="{Binding Downloads}"
-                  Margin="0,10,0,0"
-                  MouseDoubleClick="DownloadDataGrid_MouseDoubleClick"
-                  HeadersVisibility="Column"
-                  CanUserAddRows ="False"
-                  SelectionChanged="DownloadDataGrid_SelectionChanged">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" />
-                <DataGridTextColumn Header="Size" Binding="{Binding TotalSize}" Width="100" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
-                <DataGridTextColumn Header="Progress" Binding="{Binding Progress}" Width="100" />
-                <DataGridTextColumn Header="Speed" Binding="{Binding Speed}" Width="100" />
-                <DataGridTextColumn Header="ETA" Binding="{Binding EstimatedTimeRemaining}" Width="120" />
-            </DataGrid.Columns>
-        </DataGrid>
-    </DockPanel>
+                <!-- Enhanced Logo Section -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="56" Height="56" 
+                            CornerRadius="5" 
+                            Background="{StaticResource AccentGreen}" 
+                            Margin="0,0,16,0"
+                            Effect="{StaticResource LogoShadow}">
+                        <Border Width="40" Height="40" 
+                                CornerRadius="10" 
+                                Background="Transparent"
+                                ClipToBounds="True">
+                            <Image Source="image.png" 
+                                   Stretch="Uniform" 
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   RenderOptions.EdgeMode="Aliased"
+                                   UseLayoutRounding="True"
+                                   SnapsToDevicePixels="True"/>
+                        </Border>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Fetchify" 
+                                   FontSize="24" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource HeaderText}"/>
+                        <TextBlock Text="Download Manager" 
+                                   FontSize="12" 
+                                   Foreground="{StaticResource SecondaryText}" 
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Enhanced Button Group -->
+                <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <Button Content="✚ Add" Style="{StaticResource PrimaryButton}" Click="AddDownload_Click" Width="90"/>
+                    <Button Content="⏸️" Style="{StaticResource ModernButton}" Click="PauseDownload_Click" Width="50" ToolTip="Pause"/>
+                    <Button Content="▶️" Style="{StaticResource ModernButton}" Click="ResumeDownload_Click" Width="50" ToolTip="Resume"/>
+                    <Button Content="🗑️" Style="{StaticResource ModernButton}" Click="RemoveDownload_Click" Width="50" ToolTip="Remove"/>
+                    <Button Content="Settings" Style="{StaticResource ModernButton}" Click="OpenSettings_Click" Width="80" ToolTip="Settings"
+                            Background="#6366F1" Foreground="White" BorderBrush="#6366F1" FontWeight="SemiBold"/>
+                </WrapPanel>
+            </Grid>
+        </Border>
+
+        <!-- Enhanced DataGrid Container -->
+        <Border Grid.Row="1" 
+                Background="{StaticResource CardBackground}" 
+                CornerRadius="16" 
+                Padding="0"
+                Effect="{StaticResource CardShadow}">
+            <DataGrid Name="DownloadDataGrid" 
+                      AutoGenerateColumns="False" 
+                      ItemsSource="{Binding Downloads}"
+                      Margin="0"
+                      MouseDoubleClick="DownloadDataGrid_MouseDoubleClick"
+                      HeadersVisibility="Column"
+                      CanUserAddRows="False"
+                      SelectionChanged="DownloadDataGrid_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="📁 File Name" Binding="{Binding FileName}" Width="2*" />
+                    <DataGridTextColumn Header="📊 Size" Binding="{Binding TotalSize}" Width="*" />
+                    <DataGridTextColumn Header="🔄 Status" Binding="{Binding Status}" Width="*" />
+                    <DataGridTextColumn Header="📈 Progress" Binding="{Binding Progress}" Width="*" />
+                    <DataGridTextColumn Header="⚡ Speed" Binding="{Binding Speed}" Width="*" />
+                    <DataGridTextColumn Header="⏱️ ETA" Binding="{Binding EstimatedTimeRemaining}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
 </Window>

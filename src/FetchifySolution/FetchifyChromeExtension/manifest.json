@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Fetchify Downloader",
-  "version": "1.0",
-  "description": "Send downloads directly to the Fetchify app from your browser.",
+  "version": "1.1.0",
+  "description": "Send downloads directly to the Fetchify app from your browser with advanced interception capabilities.",
   "background": {
     "service_worker": "background.js"
   },
@@ -10,20 +10,26 @@
     "downloads",
     "contextMenus",
     "activeTab",
-    "scripting"
+    "scripting",
+    "notifications",
+    "storage"
   ],
-  "content_scripts": [
-  {
-    "matches": ["<all_urls>"],
-    "js": ["autoDownloadScript.js"],
-    "run_at": "document_idle"
-  }
-],
   "host_permissions": ["<all_urls>"],
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Fetchify Downloader"
+  },
+  "options_page": "options.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

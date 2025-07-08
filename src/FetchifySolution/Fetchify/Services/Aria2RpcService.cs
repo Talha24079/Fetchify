@@ -215,5 +215,15 @@ namespace Fetchify.Services
             return downloads.FirstOrDefault(d => d.Gid == gid);
         }
 
+        private static string FormatSize(long bytes)
+        {
+            if (bytes >= 1024 * 1024)
+                return $"{bytes / (1024.0 * 1024.0):F2} MB";
+            else if (bytes >= 1024)
+                return $"{bytes / 1024.0:F2} KB";
+            else
+                return $"{bytes} B";
+        }
+
     }
 }

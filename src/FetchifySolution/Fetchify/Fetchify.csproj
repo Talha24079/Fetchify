@@ -12,6 +12,7 @@
   <ItemGroup>
     <None Remove="fetchify_logo.png" />
     <None Remove="icon.ico" />
+    <None Remove="image.png" />
     <None Remove="Logo.png" />
   </ItemGroup>
 
@@ -23,6 +24,7 @@
 
   <ItemGroup>
     <Resource Include="fetchify_logo.png" />
+    <Resource Include="image.png" />
     <Resource Include="Logo.png" />
   </ItemGroup>
 

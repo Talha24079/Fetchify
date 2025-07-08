@@ -16,6 +16,8 @@ namespace Fetchify.Models
         private string totalSize;
         private string url;
         private string directory;
+        public string DownloadedSize { get; set; }
+        public string SizeDisplay => $"{DownloadedSize} / {TotalSize}";
         public ActiveDownload()
         {
             Gid = "";

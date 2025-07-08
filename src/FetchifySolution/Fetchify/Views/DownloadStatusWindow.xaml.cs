@@ -23,6 +23,7 @@ namespace Fetchify.Views
         private int lastProgress = -1;
 
         private bool isResuming = false;
+        private bool isPausing = false; // Add this to prevent multiple pause operations
 
         public Action<ActiveDownload>? OnDownloadRemoved { get; set; }
 
@@ -43,9 +44,21 @@ namespace Fetchify.Views
             if (string.IsNullOrWhiteSpace(download.Directory))
                 download.Directory = originalDirectory;
 
+            // Explicitly attach event handlers to ensure they're connected
             PauseButton.Click += PauseButton_Click;
             ResumeButton.Click += ResumeButton_Click;
             CancelButton.Click += CancelDownload_Click;
+
+            // Debug output to check initial status
+            System.Diagnostics.Debug.WriteLine($"Initial download status: {download.Status}");
+            System.Diagnostics.Debug.WriteLine($"Initial download GID: {download.Gid}");
+
+            // Set initial button states
+            UpdateButtonStates();
+
+            // Debug button states after update
+            System.Diagnostics.Debug.WriteLine($"PauseButton - Enabled: {PauseButton.IsEnabled}, Visible: {PauseButton.Visibility}");
+            System.Diagnostics.Debug.WriteLine($"ResumeButton - Enabled: {ResumeButton.IsEnabled}, Visible: {ResumeButton.Visibility}");
 
             updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             updateTimer.Tick += UpdateUI;
@@ -56,12 +69,16 @@ namespace Fetchify.Views
             networkRetryTimer.Start();
         }
 
-
         private void UpdateUI(object? sender, System.EventArgs e)
         {
             try
             {
-                DownloadedSizeTextBlock.Text = $"{(download.Progress * ParseSizeInMB(download.TotalSize) / 100.0):F2} MB";
+                double totalSizeMB = ParseSizeInMB(download.TotalSize);
+                double downloadedMB = (download.Progress * totalSizeMB) / 100.0;
+
+                DownloadedSizeTextBlock.Text = FormatSize(downloadedMB);
+                TotalSizeTextBlock.Text = FormatSize(totalSizeMB);
+
                 if (download.Progress == lastProgress)
                 {
                     stalledCounter++;
@@ -90,31 +107,30 @@ namespace Fetchify.Views
                 if (download.Progress == 100 && File.Exists(filePath))
                 {
                     download.Status = "complete";
-                    ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
+                    ErrorContainer.Visibility = Visibility.Collapsed;
                     updateTimer.Stop();
                 }
                 else if (download.Status == "active" && download.Progress > 0 && !File.Exists(filePath))
                 {
                     download.Status = "error";
                     ErrorMessageTextBlock.Text = "Download interrupted. File missing.";
-                    ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                    ErrorContainer.Visibility = Visibility.Visible;
                     updateTimer.Stop();
                 }
-
 
                 if (download.Status == "error")
                 {
                     ErrorMessageTextBlock.Text = !NetworkHelper.IsInternetAvailable()
                         ? "Download failed: Internet is disconnected."
                         : "Download failed: Invalid link, file not found, or deleted during download.";
-                    ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                    ErrorContainer.Visibility = Visibility.Visible;
 
-                    ResumeButton.Content = "Retry";
+                    ResumeButton.Content = "🔄 Retry";
                 }
                 else
                 {
-                    ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
-                    ResumeButton.Content = "Resume";
+                    ErrorContainer.Visibility = Visibility.Collapsed;
+                    ResumeButton.Content = "▶️ Resume";
                 }
 
                 StatusTextBlock.Foreground = download.Status switch
@@ -125,9 +141,7 @@ namespace Fetchify.Views
                     _ => new SolidColorBrush(Colors.Black)
                 };
 
-                PauseButton.IsEnabled = download.Status == "active";
-                ResumeButton.IsEnabled = download.Status == "paused" || download.Status == "error";
-                CancelButton.IsEnabled = download.Status != "complete" && download.Status != "removed";
+                UpdateButtonStates();
 
                 if (download.Status is "complete" or "error" or "removed")
                     updateTimer.Stop();
@@ -136,7 +150,7 @@ namespace Fetchify.Views
                 {
                     download.Status = "error";
                     ErrorMessageTextBlock.Text = "Download appears to be stalled.";
-                    ErrorMessageTextBlock.Visibility = Visibility.Visible;
+                    ErrorContainer.Visibility = Visibility.Visible;
                     updateTimer.Stop();
                 }
             }
@@ -145,6 +159,60 @@ namespace Fetchify.Views
                 WPF.MessageBox.Show("Error in UpdateUI: " + ex.Message);
                 updateTimer.Stop();
             }
+        }
+
+        private void UpdateButtonStates()
+        {
+            System.Diagnostics.Debug.WriteLine($"UpdateButtonStates called - Status: {download.Status}");
+
+            // Update button states based on current download status
+            PauseButton.IsEnabled = download.Status == "active" && !isPausing;
+            ResumeButton.IsEnabled = (download.Status == "paused" || download.Status == "error") && !isResuming;
+            CancelButton.IsEnabled = download.Status != "complete" && download.Status != "removed";
+
+            // Update button visibility for better UX
+            switch (download.Status?.ToLower())
+            {
+                case "paused":
+                    PauseButton.Visibility = Visibility.Collapsed;
+                    ResumeButton.Visibility = Visibility.Visible;
+                    break;
+
+                case "active":
+                    PauseButton.Visibility = Visibility.Visible;
+                    ResumeButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                case "queued":
+                case "waiting":
+                    // For queued/waiting downloads, show pause button but it might not be enabled yet
+                    PauseButton.Visibility = Visibility.Visible;
+                    ResumeButton.Visibility = Visibility.Collapsed;
+                    // Enable pause button for queued downloads too
+                    PauseButton.IsEnabled = !isPausing;
+                    break;
+
+                case "error":
+                    PauseButton.Visibility = Visibility.Collapsed;
+                    ResumeButton.Visibility = Visibility.Visible;
+                    break;
+
+                case "complete":
+                case "removed":
+                    PauseButton.Visibility = Visibility.Collapsed;
+                    ResumeButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                default:
+                    // For unknown statuses, show pause button and enable it
+                    PauseButton.Visibility = Visibility.Visible;
+                    ResumeButton.Visibility = Visibility.Collapsed;
+                    PauseButton.IsEnabled = !isPausing;
+                    break;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"After update - PauseButton: Enabled={PauseButton.IsEnabled}, Visible={PauseButton.Visibility}");
+            System.Diagnostics.Debug.WriteLine($"After update - ResumeButton: Enabled={ResumeButton.IsEnabled}, Visible={ResumeButton.Visibility}");
         }
 
         private double ParseSizeInMB(string sizeText)
@@ -157,17 +225,74 @@ namespace Fetchify.Views
 
         private async void PauseButton_Click(object sender, RoutedEventArgs e)
         {
-            var result = await Aria2Helper.PauseDownloadAsync(download.Gid);
-            await Task.Delay(500);
+            System.Diagnostics.Debug.WriteLine($"PauseButton_Click called - Status: {download.Status}, GID: {download.Gid}");
 
-            if (result || download.Status == "paused")
+            if (isPausing)
             {
-                download.Status = "paused";
-                await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                System.Diagnostics.Debug.WriteLine("Already pausing, returning");
+                return;
             }
-            else
+
+            isPausing = true;
+
+            try
             {
-                WPF.MessageBox.Show("Failed to pause download.");
+                // Provide immediate feedback
+                PauseButton.IsEnabled = false;
+                PauseButton.Content = "⏸️ Pausing...";
+
+                System.Diagnostics.Debug.WriteLine($"Attempting to pause download with GID: {download.Gid}");
+
+                // Check if GID is valid
+                if (string.IsNullOrWhiteSpace(download.Gid))
+                {
+                    System.Diagnostics.Debug.WriteLine("ERROR: GID is null or empty!");
+                    WPF.MessageBox.Show("Cannot pause download: Invalid download ID");
+                    return;
+                }
+
+                var result = await Aria2Helper.PauseDownloadAsync(download.Gid);
+
+                System.Diagnostics.Debug.WriteLine($"Pause result: {result}");
+
+                // Give some time for the pause to take effect
+                await Task.Delay(1000);
+
+                if (result)
+                {
+                    download.Status = "paused";
+                    await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                    System.Diagnostics.Debug.WriteLine("Download paused successfully");
+                }
+                else
+                {
+                    // Try to check current status from Aria2
+                    var rpc = new Aria2RpcService();
+                    var status = await rpc.GetDownloadStatusAsync(download.Gid);
+
+                    if (status?.Status == "paused")
+                    {
+                        download.Status = "paused";
+                        await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                        System.Diagnostics.Debug.WriteLine("Download was actually paused (confirmed via status check)");
+                    }
+                    else
+                    {
+                        WPF.MessageBox.Show($"Failed to pause download. Current status: {status?.Status ?? "Unknown"}");
+                        System.Diagnostics.Debug.WriteLine($"Failed to pause download. Status: {status?.Status}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                WPF.MessageBox.Show($"Error pausing download: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Exception in PauseButton_Click: {ex}");
+            }
+            finally
+            {
+                isPausing = false;
+                PauseButton.Content = "⏸️ Pause";
+                UpdateButtonStates();
             }
         }
 
@@ -184,19 +309,33 @@ namespace Fetchify.Views
 
             try
             {
+                ResumeButton.IsEnabled = false;
+                ResumeButton.Content = "▶️ Resuming...";
+
+                System.Diagnostics.Debug.WriteLine($"Attempting to resume download with GID: {download.Gid}");
+
                 if (await Aria2Helper.ResumeDownloadAsync(download.Gid))
                 {
                     download.Status = "active";
                     await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                    System.Diagnostics.Debug.WriteLine("Download resumed successfully");
                 }
                 else
                 {
                     WPF.MessageBox.Show("Failed to resume download.");
+                    System.Diagnostics.Debug.WriteLine("Failed to resume download");
                 }
+            }
+            catch (Exception ex)
+            {
+                WPF.MessageBox.Show($"Error resuming download: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Exception in ResumeButton_Click: {ex}");
             }
             finally
             {
                 isResuming = false;
+                ResumeButton.Content = "▶️ Resume";
+                UpdateButtonStates();
             }
         }
 
@@ -227,10 +366,9 @@ namespace Fetchify.Views
                 download.Speed = "0 KB/s";
                 download.EstimatedTimeRemaining = "--";
 
-                ErrorMessageTextBlock.Visibility = Visibility.Collapsed;
+                ErrorContainer.Visibility = Visibility.Collapsed;
                 updateTimer.Start();
             }
-
             else
             {
                 WPF.MessageBox.Show("Retry failed: " + newGid);
@@ -285,6 +423,15 @@ namespace Fetchify.Views
             updateTimer.Stop();
             networkRetryTimer.Stop();
             base.OnClosed(e);
+        }
+
+        private string FormatSize(double sizeInMB)
+        {
+            if (sizeInMB >= 1024)
+                return $"{(sizeInMB / 1024.0):F2} GB";
+            if (sizeInMB >= 1)
+                return $"{sizeInMB:F2} MB";
+            return $"{(sizeInMB * 1024.0):F0} KB";
         }
     }
 }

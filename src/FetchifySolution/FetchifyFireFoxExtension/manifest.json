@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "name": "Fetchify Downloader",
+  "version": "1.0",
+  "description": "Send downloads directly to the Fetchify app from your browser.",
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": [
+    "contextMenus",
+    "downloads",
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["autoDownloadScript.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "48": "icon.png"
+  },
+  "browser_action": {
+    "default_icon": "icon.png"
+  }
+}

@@ -90,51 +90,60 @@
                 addWindow.ShowDialog();
             }
 
-            public async void StartDownload(DownloadItem item)
+        public async void StartDownload(DownloadItem item)
+        {
+            if (string.IsNullOrWhiteSpace(item.FileName))
             {
-                string gid = await rpcService.AddDownloadAsync(item.Url, item.Directory, item.FileName);
-
-                if (!string.IsNullOrEmpty(gid) && !gid.StartsWith("Error"))
-                {
-                    var activeDownload = new ActiveDownload
-                    {
-                        Gid = gid,
-                        FileName = item.FileName,
-                        Status = "Queued",
-                        Progress = item.Progress,
-                        Speed = item.Speed,
-                        EstimatedTimeRemaining = item.EstimatedTimeRemaining,
-                        TotalSize = "0 MB",
-                        Url = item.Url,
-                        Directory = item.Directory
-                    };
-                DownloadManager.Downloads.Add(activeDownload);
-
-                    var statusWindow = new DownloadStatusWindow(activeDownload)
-                    {
-                        Owner = this
-                    };
-                    statusWindow.OnDownloadRemoved = async (removedDownload) =>
-                    {
-                        if (removedDownload != null)
-                        {
-                            DownloadManager.Downloads.Remove(removedDownload);
-                            await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
-                        }
-                    };
-                    statusWindow.Show();
-                }
-                else
-                {
-                    WPF.MessageBox.Show("Failed to start download: " + gid);
-                }
+                item.FileName = await LinkNameHelper.GenerateFileNameAsync(item.Url);
             }
 
-            private async void RefreshTimer_Tick(object? sender, EventArgs e)
+            string gid = await rpcService.AddDownloadAsync(item.Url, item.Directory, item.FileName);
+
+            if (!string.IsNullOrEmpty(gid) && !gid.StartsWith("Error"))
+            {
+                // ⏬ Try to get fresh status from Aria2
+                var refreshed = await rpcService.GetDownloadStatusAsync(gid);
+
+                var activeDownload = new ActiveDownload
+                {
+                    Gid = gid,
+                    FileName = item.FileName,
+                    Status = "Queued",
+                    Progress = refreshed?.Progress ?? 0,
+                    Speed = refreshed?.Speed ?? "0 KB/s",
+                    EstimatedTimeRemaining = refreshed?.EstimatedTimeRemaining ?? "--",
+                    TotalSize = refreshed?.TotalSize ?? "Unknown",
+                    Url = item.Url,
+                    Directory = item.Directory
+                };
+
+                DownloadManager.Downloads.Add(activeDownload);
+
+                var statusWindow = new DownloadStatusWindow(activeDownload)
+                {
+                    Owner = this
+                };
+                statusWindow.OnDownloadRemoved = async (removedDownload) =>
+                {
+                    if (removedDownload != null)
+                    {
+                        DownloadManager.Downloads.Remove(removedDownload);
+                        await DownloadHistoryManager.SaveDownloadsAsync(DownloadManager.Downloads.ToList());
+                    }
+                };
+                statusWindow.Show();
+            }
+            else
+            {
+                WPF.MessageBox.Show("Failed to start download: " + gid);
+            }
+        }
+
+
+        private async void RefreshTimer_Tick(object? sender, EventArgs e)
             {
                 try
                 {
-                    // Store currently selected GID
                     string? selectedGid = (DownloadDataGrid.SelectedItem as ActiveDownload)?.Gid;
 
                     var updatedList = await rpcService.GetAllDownloadsAsync();
@@ -151,10 +160,9 @@
                                 existing.Progress = updatedItem.Progress;
 
                             if (!string.IsNullOrWhiteSpace(updatedItem.TotalSize) && updatedItem.TotalSize != "0 MB")
-                                existing.TotalSize = updatedItem.TotalSize;
+                                existing.TotalSize = FormatSize(updatedItem.TotalSize);
 
-                            // Optionally update speed and ETA only if the status is "active"
-                            if (updatedItem.Status == "active")
+                        if (updatedItem.Status == "active")
                             {
                                 existing.Speed = updatedItem.Speed;
                                 existing.EstimatedTimeRemaining = updatedItem.EstimatedTimeRemaining;
@@ -406,5 +414,25 @@
             {
 
             }
-        }
+
+            private string FormatSize(string sizeText)
+            {
+                if (string.IsNullOrWhiteSpace(sizeText) || sizeText == "Unknown")
+                    return "Unknown";
+
+                if (sizeText.EndsWith("MB", StringComparison.OrdinalIgnoreCase) &&
+                    double.TryParse(sizeText.Replace("MB", "", StringComparison.OrdinalIgnoreCase).Trim(), out double mb))
+                {
+                    if (mb >= 1024)
+                        return $"{(mb / 1024.0):F2} GB";
+                    else if (mb >= 1)
+                        return $"{mb:F2} MB";
+                    else
+                        return $"{(mb * 1024):F0} KB";
+                }
+
+                return sizeText;
+            }
+
     }
+}

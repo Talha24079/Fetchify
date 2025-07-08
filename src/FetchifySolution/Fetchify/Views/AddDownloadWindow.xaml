@@ -1,114 +1,201 @@
 ﻿<Window x:Class="Fetchify.Views.AddDownloadWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Add New Download" Height="320" Width="420"
+        Title="Add New Download" Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
-        Background="#F4F5F7"
+        Background="#F8FAFC"
         FontFamily="Segoe UI"
         ResizeMode="NoResize">
 
     <Window.Resources>
-        <!-- Reuse Main Window Styles -->
-        <SolidColorBrush x:Key="AccentGreen" Color="#4CAF50" />
-        <SolidColorBrush x:Key="BodyText" Color="#3C3C3C" />
+        <!-- Match Main Window Colors -->
+        <SolidColorBrush x:Key="AccentGreen" Color="#10B981" />
+        <SolidColorBrush x:Key="AccentGreenHover" Color="#059669" />
+        <SolidColorBrush x:Key="BodyText" Color="#374151" />
+        <SolidColorBrush x:Key="HeaderText" Color="#111827" />
         <SolidColorBrush x:Key="SoftWhite" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="BorderColor" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="HoverBackground" Color="#F3F4F6" />
+        <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
 
-        <!-- Rounded Button Style -->
-        <Style x:Key="RoundedButton" TargetType="Button">
+        <!-- Drop Shadow Effects -->
+        <DropShadowEffect x:Key="CardShadow" BlurRadius="10" ShadowDepth="2" Opacity="0.1" Color="#000000" />
+        <DropShadowEffect x:Key="ButtonShadow" BlurRadius="6" ShadowDepth="2" Opacity="0.1" Color="#000000" />
+
+        <!-- Enhanced Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
             <Setter Property="Foreground" Value="{StaticResource BodyText}" />
             <Setter Property="Background" Value="{StaticResource SoftWhite}" />
-            <Setter Property="BorderBrush" Value="#CCCCCC" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Padding" Value="10,5" />
-            <Setter Property="Margin" Value="5,0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Margin" Value="4,0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Height" Value="35" />
+            <Setter Property="Height" Value="36" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
+                                CornerRadius="6"
+                                Effect="{StaticResource ButtonShadow}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource HoverBackground}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <!-- Primary Green Button -->
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
+        <!-- Primary Button -->
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
             <Setter Property="Background" Value="{StaticResource AccentGreen}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Effect="{StaticResource ButtonShadow}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentGreenHover}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreenHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <!-- TextBox Styling -->
-        <Style TargetType="TextBox" x:Key="RoundedTextBox">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Padding" Value="6"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+        <!-- Enhanced TextBox Style -->
+        <Style TargetType="TextBox" x:Key="ModernTextBox">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="{StaticResource SoftWhite}"/>
-            <Setter Property="Height" Value="30"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Foreground" Value="{StaticResource BodyText}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
                         <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="5">
-                            <!-- 👈 Rounded corners -->
-                            <ScrollViewer x:Name="PART_ContentHost"/>
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost" Padding="{TemplateBinding Padding}"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentGreen}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        
-        <!-- TextBlock Style -->
+
+        <!-- Label Style -->
         <Style TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="{StaticResource BodyText}"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
-        
-        
     </Window.Resources>
 
-    <Grid Margin="20">
-        <StackPanel Orientation="Vertical" VerticalAlignment="Top">
-            <!-- Download URL -->
-            <TextBlock Text="Enter download URL:" />
-            <TextBox x:Name="UrlTextBox" Style="{StaticResource RoundedTextBox}" TextChanged="UrlTextBox_TextChanged"/>
+    <!-- Main Card Container -->
+    <Border Background="{StaticResource CardBackground}" 
+            CornerRadius="16" 
+            Margin="16"
+            Effect="{StaticResource CardShadow}">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <!-- File Name -->
-            <TextBlock Text="File Name:"/>
-            <TextBox x:Name="FileNameBox" Style="{StaticResource RoundedTextBox}"/>
-
-            <!-- Download Directory -->
-            <TextBlock Text="Download Directory:"/>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
-                <TextBox Name="DirectoryTextBox" Width="260" Height="30" 
-         Style="{StaticResource RoundedTextBox}" VerticalAlignment="Center"/>
-                <Button Content="Browse..." Width="90" Height="30"
-                Margin="10,0,0,10"
-                VerticalAlignment="Center"
-                Style="{StaticResource RoundedButton}" 
-                Click="BrowseDirectory_Click"/> 
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,24">
+                <TextBlock Text="Add New Download" 
+                           FontSize="20" 
+                           FontWeight="Bold" 
+                           Foreground="{StaticResource HeaderText}"/>
+                <TextBlock Text="Enter the download details below" 
+                           FontSize="13" 
+                           Foreground="{StaticResource BodyText}" 
+                           Margin="0,4,0,0"/>
             </StackPanel>
 
+            <!-- Form Fields -->
+            <StackPanel Grid.Row="1" Orientation="Vertical">
+                <!-- Download URL -->
+                <TextBlock Text="Download URL" />
+                <TextBox x:Name="UrlTextBox" 
+                         Style="{StaticResource ModernTextBox}" 
+                         ToolTip="Enter the complete URL of the file to download"/>
 
+                <!-- File Name -->
+                <TextBlock Text="File Name"/>
+                <TextBox x:Name="FileNameBox" 
+                         Style="{StaticResource ModernTextBox}"
+                         ToolTip="Specify the filename (leave blank to auto-detect)"/>
 
-            <!-- Start Button -->
-            <Button Content="Start Download"
-                    Width="150"
-                    HorizontalAlignment="Right"
-                    Style="{StaticResource PrimaryButton}"
-                    Click="StartDownload_Click"/>
-        </StackPanel>
-    </Grid>
+                <!-- Download Directory -->
+                <TextBlock Text="Download Directory"/>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" 
+                             Name="DirectoryTextBox" 
+                             Style="{StaticResource ModernTextBox}"
+                             Margin="0,0,8,0"
+                             ToolTip="Choose where to save the downloaded file"/>
+                    <Button Grid.Column="1" 
+                            Content="📁 Browse"
+                            Width="90"
+                            Style="{StaticResource ModernButton}" 
+                            Click="BrowseDirectory_Click"
+                            VerticalAlignment="Top"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="2" 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Right" 
+                        Margin="0,16,0,0">
+                <Button Content="Cancel"
+                        Width="80"
+                        Style="{StaticResource ModernButton}"
+                        Click="CancelButton_Click"/>
+                <Button Content="Start Download"
+                        Width="140"
+                        Style="{StaticResource PrimaryButton}"
+                        Click="StartDownload_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
 </Window>
