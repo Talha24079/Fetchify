@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36203.30 d17.14
+VisualStudioVersion = 17.14.36203.30
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fetchify", "Fetchify\Fetchify.csproj", "{A3386D6D-30D6-47A1-8E2E-D3841854B9BB}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "FetchifyInstaller", "FetchifyInstaller\FetchifyInstaller.vdproj", "{540C3B1B-2B28-1C66-26AE-96613E798876}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,8 @@ Global
 		{A3386D6D-30D6-47A1-8E2E-D3841854B9BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3386D6D-30D6-47A1-8E2E-D3841854B9BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A3386D6D-30D6-47A1-8E2E-D3841854B9BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{540C3B1B-2B28-1C66-26AE-96613E798876}.Debug|Any CPU.ActiveCfg = Debug
+		{540C3B1B-2B28-1C66-26AE-96613E798876}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
