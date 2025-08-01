@@ -16,9 +16,7 @@
 
 
 ## 🖼 Screenshots
-<!--
 ![Main UI](screenshots/mainwindow.png)
--->
 
 ---
 
