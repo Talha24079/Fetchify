@@ -1,13 +1,51 @@
-# Fetchify – Download Manager
+# 🚀 Fetchify
 
-Fetchify is a simple and powerful open-source download manager built using C# and aria2.  
-It allows users to manage, pause, resume, and schedule downloads efficiently.
+[![Download Setup](https://img.shields.io/github/v/release/Talha24079/Fetchify?label=Download%20Setup)](https://github.com/Talha24079/Fetchify/releases/latest)
 
-## Features (Planned)
-- Multi-threaded downloads via aria2
-- PauseResumeCancel functionality
-- Download queue with progress stats
-- GUI built with Windows Forms
+**Fetchify** is a lightweight download manager powered by `aria2` and built with a clean WPF interface. It helps you manage downloads with pause/resume support, auto-reconnect, and segmented downloading — all packed in a simple installer.
 
-## License
-Licensed under the [GPL v3](LICENSE).
+---
+
+## ✨ Features
+
+- ✅ Pause and resume downloads
+- ✅ Auto-reconnect on failures
+- ✅ Parallel segmented downloading
+- ✅ Persistent download state (remembers paused and completed tasks)
+- ✅ Simple installer (`.exe` and optional `.msi`)
+- ✅ Clean and responsive WPF user interface
+
+---
+
+## 📦 Installation
+
+Get the latest version from the [Releases Page](https://github.com/Talha24079/Fetchify/releases/latest):
+
+| File                  | Description                                |
+|-----------------------|--------------------------------------------|
+| `FetchifyInstaller.msi` | Optional for advanced/silent installs.   |
+
+---
+
+## 🖼 Screenshots
+<!--
+![Main UI](screenshots/mainwindow.png)
+-->
+
+---
+
+## 🔧 Built With
+
+- `.NET` and `C#`
+- `WPF` for desktop GUI
+- `aria2` (download engine)
+- Visual Studio Installer Project
+
+---
+
+## 🧑‍💻 For Developers
+
+Clone the repo and open `FetchifySolution.sln` in Visual Studio. Make sure `aria2c` is included or configured correctly in your build.
+
+```bash
+git clone https://github.com/Talha24079/Fetchify.git
