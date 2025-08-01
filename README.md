@@ -12,20 +12,8 @@
 - ✅ Auto-reconnect on failures
 - ✅ Parallel segmented downloading
 - ✅ Persistent download state (remembers paused and completed tasks)
-- ✅ Simple installer (`.exe` and optional `.msi`)
 - ✅ Clean and responsive WPF user interface
 
----
-
-## 📦 Installation
-
-Get the latest version from the [Releases Page](https://github.com/Talha24079/Fetchify/releases/latest):
-
-| File                  | Description                                |
-|-----------------------|--------------------------------------------|
-| `FetchifyInstaller.msi` | Optional for advanced/silent installs.   |
-
----
 
 ## 🖼 Screenshots
 <!--
